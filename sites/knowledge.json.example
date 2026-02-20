@@ -1,0 +1,26 @@
+{
+  "_comment": "Example knowledge.json file for a site",
+  "site_key": "example.com",
+  "version": 1,
+  "last_updated": "2026-02-20T10:00:00Z",
+  "strategy_scores": {
+    "http": {"score": 0.72, "samples": 50},
+    "browser": {"score": 0.85, "samples": 30}
+  },
+  "effective_patterns": [
+    {
+      "pattern": "article_list = css('.news-list li')",
+      "effectiveness": 0.95,
+      "last_verified": "2026-02-20"
+    }
+  ],
+  "failure_history": [
+    {
+      "timestamp": "2026-02-19T15:30:00Z",
+      "failure_type": "selector_error",
+      "resolution": "plugin_update"
+    }
+  ],
+  "anti_bot_measures": ["rate_limit", "captcha"],
+  "recommended_strategy": "browser"
+}

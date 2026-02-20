@@ -1,0 +1,14 @@
+# Sites Directory
+
+Site-specific knowledge and configuration files are stored here.
+
+Structure:
+```
+sites/
+├── {site_key}/
+│   ├── knowledge.json     # Learned knowledge for this site
+│   └── config.yaml        # Site-specific configuration
+```
+
+Note: Since Agent is disposable (用完即弃), knowledge.json is primarily
+for Orchestrator analytics and historical reference, not for Agent runtime.
