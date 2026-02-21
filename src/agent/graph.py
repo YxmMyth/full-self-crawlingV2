@@ -5,17 +5,9 @@ Graph - LangGraph 状态机
 """
 
 from typing import Literal
-from langgraph.graph import StateGraph, END
+from langgraph.graph import StateGraph, END, START
 
 from .state import ReconState, create_initial_state, should_run_sool, should_retry
-from .nodes import (
-    sense_node,
-    plan_node,
-    act_node,
-    verify_node,
-    report_node,
-    soal_node,
-)
 
 
 def create_recon_graph() -> StateGraph:
@@ -34,16 +26,19 @@ def create_recon_graph() -> StateGraph:
     graph.add_node("report", report_node)
     graph.add_node("soal", soal_node)
 
+    # 添加边：START → sense（入口点）
+    graph.add_edge(START, "sense")
+
     # 添加边（正常流程）
     graph.add_edge("sense", "plan")
     graph.add_edge("plan", "act")
 
-    # 条件边：act → verify 或 act → sool
+    # 条件边：act → verify 或 act → soal
     graph.add_conditional_edges(
         "act",
-        lambda state: "sool" if should_run_sool(state) == "sool" else "verify",
+        should_run_sool,
         {
-            "sool": "sool",
+            "soal": "soal",
             "verify": "verify"
         }
     )
@@ -59,7 +54,7 @@ def create_recon_graph() -> StateGraph:
     )
 
     # SOOAL 循环
-    graph.add_edge("sool", "act")
+    graph.add_edge("soal", "act")
 
     # 结束
     graph.add_edge("report", END)
@@ -97,6 +92,7 @@ async def sense_node(state: ReconState) -> ReconState:
 async def plan_node(state: ReconState) -> ReconState:
     """Plan 节点：LLM 生成爬虫代码"""
     from .prompts import CODE_GENERATION_PROMPT
+    from .llm import generate_code
 
     state["stage"] = "plan"
 
@@ -108,24 +104,26 @@ async def plan_node(state: ReconState) -> ReconState:
         html_size=len(state.get("html_snapshot", "")),
     )
 
-    # TODO: 调用 LLM 生成代码
-    # code = await llm_generate(prompt)
-    # state["generated_code"] = code
-
-    # 临时：使用占位符
-    state["generated_code"] = "# TODO: LLM generated code\n" + prompt
-    state["plan_reasoning"] = "根据站点特征生成定制爬虫"
+    # 调用 LLM 生成代码
+    try:
+        code = await generate_code(prompt)
+        state["generated_code"] = code
+        state["plan_reasoning"] = f"LLM 根据 {len(state.get('detected_features', []))} 个特征生成代码"
+    except Exception as e:
+        state["error"] = f"Plan failed: {str(e)}"
+        state["generated_code"] = ""
 
     return state
 
 
 async def act_node(state: ReconState) -> ReconState:
     """Act 节点：沙箱执行代码"""
-    from .sandbox import SandboxExecutor
+    from .sandbox import create_sandbox
 
     state["stage"] = "act"
 
-    executor = SandboxExecutor()
+    # 创建沙箱（可配置使用 Docker 或 Simple）
+    executor = create_sandbox(use_docker=False)  # 开发阶段用 Simple
 
     result = await executor.execute(
         code=state["generated_code"],
@@ -133,37 +131,69 @@ async def act_node(state: ReconState) -> ReconState:
     )
 
     state["execution_result"] = result
-    state["execution_logs"] = result.get("logs", [])
+    state["execution_logs"] = [result.get("stderr", "")]
     state["sool_iteration"] = state.get("sool_iteration", 0)
+
+    # 提取 sample_data 供 verify 节点使用
+    if result.get("parsed_data"):
+        if isinstance(result["parsed_data"], dict) and "results" in result["parsed_data"]:
+            state["sample_data"] = result["parsed_data"]["results"]
+        elif isinstance(result["parsed_data"], list):
+            state["sample_data"] = result["parsed_data"]
+        else:
+            state["sample_data"] = []
+    else:
+        state["sample_data"] = []
 
     return state
 
 
 async def verify_node(state: ReconState) -> ReconState:
     """Verify 节点：质量评估"""
+    from .llm import ZhipuClient
+    import os
+
     state["stage"] = "verify"
 
-    # TODO: 实际的质量评估逻辑
-    # 临时：基于执行结果打分
-    if state["execution_result"].get("success"):
-        state["quality_score"] = 0.8
-        state["sample_data"] = state["execution_result"].get("data", [])
-    else:
-        state["quality_score"] = 0.0
-        state["sample_data"] = []
+    # 使用 LLM 评估质量
+    try:
+        client = ZhipuClient(api_key=os.environ.get("ZHIPU_API_KEY"))
+        quality_result = await client.evaluate_quality(
+            user_goal=state["user_goal"],
+            extracted_data=state.get("sample_data", []),
+        )
+        state["quality_score"] = quality_result.get("overall_score", 0.0)
+        state["quality_issues"] = quality_result.get("issues", [])
+    except Exception as e:
+        # 降级：基于执行结果简单打分
+        if state["execution_result"].get("success"):
+            state["quality_score"] = 0.8
+        else:
+            state["quality_score"] = 0.0
 
     return state
 
 
 async def report_node(state: ReconState) -> ReconState:
     """Report 节点：生成最终报告"""
-    from .prompts import REPORT_GENERATION_PROMPT
+    from .llm import ZhipuClient
+    import os
 
     state["stage"] = "report"
 
-    # 生成报告
-    # TODO: 使用 LLM 生成 Markdown 报告
-    markdown = f"""# 网站数据侦察报告
+    # 使用 LLM 生成报告
+    try:
+        client = ZhipuClient(api_key=os.environ.get("ZHIPU_API_KEY"))
+        markdown = await client.generate_report(
+            site_url=state["site_url"],
+            user_goal=state["user_goal"],
+            site_info=state.get("site_context", {}),
+            sample_data=state.get("sample_data", []),
+        )
+        state["markdown_report"] = markdown
+    except Exception as e:
+        # 降级：生成简单报告
+        markdown = f"""# 网站数据侦察报告
 
 ## 站点信息
 - URL: {state['site_url']}
@@ -174,8 +204,8 @@ async def report_node(state: ReconState) -> ReconState:
 - 质量分数: {state.get('quality_score', 0)}
 - 样本数量: {len(state.get('sample_data', []))}
 """
+        state["markdown_report"] = markdown
 
-    state["markdown_report"] = markdown
     state["final_report"] = {
         "site_url": state["site_url"],
         "user_goal": state["user_goal"],
@@ -190,21 +220,25 @@ async def report_node(state: ReconState) -> ReconState:
 
 async def soal_node(state: ReconState) -> ReconState:
     """SOOAL 节点：代码修复"""
-    from .prompts import CODE_REPAIR_PROMPT
+    from .llm import ZhipuClient
+    import os
 
     state["sool_iteration"] += 1
 
-    # TODO: 使用 LLM 修复代码
-    prompt = CODE_REPAIR_PROMPT.format(
-        original_code=state["generated_code"],
-        error_logs="\n".join(state.get("execution_logs", [])),
-        sool_iteration=state["sool_iteration"],
-    )
+    # 使用 LLM 修复代码
+    try:
+        client = ZhipuClient(api_key=os.environ.get("ZHIPU_API_KEY"))
+        repaired_code = await client.repair_code(
+            original_code=state["generated_code"],
+            error_logs="\n".join(state.get("execution_logs", [])),
+            iteration=state["sool_iteration"],
+        )
+        state["generated_code"] = repaired_code
+        state["last_error"] = "Code repaired by LLM"
+    except Exception as e:
+        state["last_error"] = f"SOOAL failed: {str(e)}"
 
-    # repaired_code = await llm_generate(prompt)
-    # state["generated_code"] = repaired_code
-
-    # 临时：记录错误历史
+    # 记录错误历史
     if state.get("error_history") is None:
         state["error_history"] = []
     state["error_history"].append(state.get("last_error", "unknown"))
@@ -212,66 +246,6 @@ async def soal_node(state: ReconState) -> ReconState:
     return state
 
 
-# ===== 沙箱执行器 =====
+# ===== 沙箱执行器导入 =====
 
-class SandboxExecutor:
-    """沙箱代码执行器（简化版）"""
-
-    async def execute(
-        self,
-        code: str,
-        timeout: int = 300,
-    ) -> Dict[str, Any]:
-        """在沙箱中执行代码"""
-        import asyncio
-        import tempfile
-        import os
-
-        # 写入临时文件
-        with tempfile.NamedTemporaryFile(
-            mode='w',
-            suffix='.py',
-            delete=False,
-            encoding='utf-8'
-        ) as f:
-            f.write(code)
-            code_path = f.name
-
-        try:
-            # 执行代码
-            process = await asyncio.create_subprocess_exec(
-                'python',
-                code_path,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                cwd=tempfile.gettempdir(),
-            )
-
-            stdout, stderr = await asyncio.wait_for(
-                process.communicate(),
-                timeout=timeout
-            )
-
-            success = process.returncode == 0
-
-            return {
-                "success": success,
-                "stdout": stdout,
-                "stderr": stderr,
-                "returncode": process.returncode,
-                "error": stderr if not success else None,
-            }
-
-        except asyncio.TimeoutError:
-            process.kill()
-            return {
-                "success": False,
-                "error": "Execution timeout",
-            }
-
-        finally:
-            # 清理临时文件
-            try:
-                os.unlink(code_path)
-            except:
-                pass
+from .sandbox import create_sandbox

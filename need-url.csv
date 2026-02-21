@@ -1,0 +1,11 @@
+序号,数据需求场景,对应的URL
+1,提取数学题库中的问题、答案和难度等级（用于AI数学模型预训练数据集）。,https://artofproblemsolving.com/community/c6h/art-of-problem-solving
+2,提取最新科技新闻标题、摘要、正文和发布日期（用于新闻聚合垂类数据库）。,https://techcrunch.com
+3,提取UI/UX设计灵感图片、设计师信息和标签（用于设计AI生成模型的图像原材料）。,https://dribbble.com/shots/popular/web-design
+4,提取AI相关学术论文的标题、作者、摘要和引用数（用于科研预训练语料库）。,https://arxiv.org/list/cs.AI/recent
+5,提取历史名人传记信息，包括生平、成就和时间线（用于人物知识图谱数据库）。,https://en.wikipedia.org/wiki/Albert_Einstein
+6,提取编程题库中的代码挑战、解决方案和测试用例（用于代码生成模型预训练）。,https://leetcode.com/problemset/all/
+7,提取财经新闻中的股票数据、公司报告摘要和分析师意见（用于金融垂类数据库）。,https://www.bloomberg.com/markets
+8,提取高质量摄影图片、元数据（如分辨率、主题）和版权信息（用于图像预训练数据集）。,https://unsplash.com
+9,提取医学学术论文的摘要、方法论和结论（用于医疗AI模型的知识原材料）。,https://pubmed.ncbi.nlm.nih.gov
+10,提取电影人物信息，包括角色描述、演员简介和剧情关联（用于娱乐知识数据库）。,https://www.imdb.com/title/tt0111161/

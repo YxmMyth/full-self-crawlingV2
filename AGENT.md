@@ -1,8 +1,25 @@
 # Full-Self-Crawling - Hybrid Recon Agent
 
-**Version**: v3.0.0 (Hybrid Architecture)
+**Version**: v3.1.0 (Hybrid Architecture)
 **Date**: 2026-02-21
 **Scope**: Single-site reconnaissance agent with code generation
+
+---
+
+## Reader Guide
+
+本文档面向两类读者：
+
+| 读者类型 | 阅读重点 |
+|---------|---------|
+| **开发者** | 关注架构设计、状态机实现、接口协议、错误处理 |
+| **Coding Agent** | 关注数据格式、接口规范、Prompt 模板、代码示例 |
+
+**快速导航**：
+- 想了解 Agent 如何工作 → 阅读 [1. Agent Overview](#1-agent-overview) 和 [2. Hybrid Architecture](#2-hybrid-architecture)
+- 想调用 Agent → 阅读 [6. Interface Design](#6-interface-design) 和 [9. Orchestrator 交互协议](#9-orchestrator-交互协议)
+- 想扩展功能 → 阅读 [3. LangGraph State Machine](#3-langgraph-state-machine) 和 [4. Tool Chain](#4-tool-chain)
+- 出现问题 → 阅读 [8. SOOAL 自修复循环](#8-sooal-自修复循环) 和 [10. 错误处理策略](#10-错误处理策略)
 
 ---
 
@@ -14,8 +31,12 @@
 4. [Tool Chain](#4-tool-chain)
 5. [Code Generation & Execution](#5-code-generation--execution)
 6. [Interface Design](#6-interface-design)
-7. [Long-term Memory](#7-long-term-memory)
-8. [Deployment](#8-deployment)
+7. [SOOAL 自修复循环](#7-sooal-自修复循环)
+8. [Long-term Memory](#8-long-term-memory)
+9. [Orchestrator 交互协议](#9-orchestrator-交互协议)
+10. [错误处理策略](#10-错误处理策略)
+11. [完整案例演示](#11-完整案例演示)
+12. [Deployment](#12-deployment)
 
 ---
 
@@ -59,6 +80,39 @@ LLM 分析 → 生成爬虫代码 → 沙箱执行 → 输出报告 + 样本
 | 适配新网站 | 等开发者更新 | **LLM 自己适配** |
 | 失败处理 | 修改配置参数 | **修改代码重跑** |
 | 扩展性 | 受限于组件数量 | **无限（LLM 写新逻辑）** |
+
+---
+
+## 2. Agent 在系统中的位置
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Orchestrator（编排层）                   │
+│  - 和用户交互                                                │
+│  - 精确化需求                                              │
+│  - 分配任务给 Agent                                         │
+│  - 收集报告呈现给用户                                       │
+└─────────────────────────────────────────────────────────────────┘
+                            │
+                    分发任务
+                            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    SiteAgent（侦察 Agent）                    │
+│  ┌─────────────────────────────────────────────────────────┐  │
+│  │           LangGraph 状态机（每个 Agent 独立）             │  │
+│  │  Sense → Plan → Act → Verify → Report                   │  │
+│  │  - 分阶段生成代码                                       │  │
+│  │  - 沙箱执行                                             │  │
+│  │  - SOOAL 自修复                                          │  │
+│  └─────────────────────────────────────────────────────────┘  │
+│                                                              │
+│  输入：site_url + data_requirement                             │
+│  输出：Reconnaissance Report                                  │
+│        - site_info: 网站信息                                 │
+│        - data_info: 数据信息（数量、质量）                     │
+│        - sample_data: 真实样本数据                            │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -115,7 +169,40 @@ LLM 分析 → 生成爬虫代码 → 沙箱执行 → 输出报告 + 样本
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### 2.2 执行流程
+### 2.2 分阶段代码生成策略
+
+**策略**：分阶段生成，而非一次性生成大段代码
+
+```
+Sense 节点 → 生成"探测代码"
+    ├─ 访问首页
+    ├─ 检测页面特征
+    └─ 快速分析
+
+Plan 节点 → 生成"采样+提取代码"
+    ├─ 根据需求设计采样逻辑
+    ├─ 定义数据提取规则
+    └─ 实现 JSON 输出
+
+Act 节点 → 执行代码
+    ├─ Docker 沙箱运行
+    ├─ 收集执行结果
+    └─ 捕获错误日志
+
+SOOAL 节点 → 生成"修复代码"
+    ├─ 分析错误原因
+    ├─ 修改代码逻辑
+    └─ 重新执行
+```
+
+**优势**：
+- 每个阶段代码更小、更易调试
+- LLM 可以根据上一阶段结果调整下一阶段代码
+- 失败时只修复相关阶段，不用重新生成全部
+
+---
+
+### 2.3 执行流程
 
 ```
 用户需求 → Orchestrator → SiteAgent
@@ -692,7 +779,168 @@ on_error(error: {
 
 ---
 
-## 7. Long-term Memory
+## 7. SOOAL 自修复循环
+
+SOOAL（Sense → Orient → Act → Verify → Learn）是 Recon Agent 的核心自适应机制，用于处理采样/执行失败（如反爬封禁、代码崩溃、选择器失效）。最多 5 轮循环，失败后返回带错误信息的报告。
+
+### 7.1 设计理念
+
+| 阶段 | 英文 | 说明 | 输入 → 输出 |
+|------|------|------|------------|
+| 感知 | Sense | 收集失败证据 | 错误日志 → 证据包 |
+| 判断 | Orient | 分析根因和对策 | 证据包 → 修复方案 |
+| 行动 | Act | 执行修复 | 修复方案 → 新代码 |
+| 验证 | Verify | 检查修复效果 | 执行结果 → 通过/失败 |
+| 学习 | Learn | 记录有效策略 | 成功方案 → 记忆库 |
+
+### 7.2 循环流程
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    SOOAL 循环流程                               │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Act 节点执行失败                                                │
+│         │                                                       │
+│         ▼                                                       │
+│  ┌─────────────┐                                               │
+│  │  Sense      │  收集：错误日志、页面截图、HTML结构、robots.txt │
+│  └─────────────┘                                               │
+│         │                                                       │
+│         ▼                                                       │
+│  ┌─────────────┐                                               │
+│  │  Orient     │  LLM 分析：根因是什么？能修复吗？              │
+│  └─────────────┘   → 选择器失效？反爬封禁？超时？               │
+│         │                                                       │
+│         ▼                                                       │
+│  ┌─────────────┐                                               │
+│  │  Act        │  LLM 修改代码：                                │
+│  └─────────────┘   - 加等待时间、换选择器、加 proxy、改 UA      │
+│         │                                                       │
+│         ▼                                                       │
+│  ┌─────────────┐                                               │
+│  │  Verify     │  检查：执行成功？数据质量？                    │
+│  └─────────────┘                                               │
+│         │                                                       │
+│    ┌────┴────┐                                                │
+│    ▼         ▼                                                │
+│  通过      失败                                                 │
+│    │         │                                                 │
+│    ▼         ▼                                                 │
+│ Learn    回 Act（最多5轮）                                      │
+│    │         │                                                 │
+│    ▼         ▼                                                 │
+│ 记忆    放弃（返回失败报告）                                    │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 7.3 在 LangGraph 中的实现
+
+```python
+# src/agent/graph.py
+
+def should_run_sool(state: ReconState) -> Literal["sool", "verify"]:
+    """判断是否需要 SOOAL 修复"""
+    if not state.get("execution_result"):
+        return "sool"
+
+    # 执行成功，直接验证
+    if state["execution_result"].get("success"):
+        return "verify"
+
+    # 检查错误是否可修复
+    error = state["execution_result"].get("error")
+    if error and state["sool_iteration"] < 5:
+        return "sool"
+
+    # 超过迭代次数，放弃修复
+    return "verify"
+
+# 条件边：Act → Sool 或 Act → Verify
+graph.add_conditional_edges(
+    "act",
+    should_run_sool,
+    {
+        "sool": "sool",
+        "verify": "verify"
+    }
+)
+
+# SOOAL 循环：Sool → Act
+graph.add_edge("sool", "act")
+```
+
+### 7.4 SOOAL 节点实现
+
+```python
+async def soal_node(state: ReconState) -> ReconState:
+    """SOOAL 节点：分析错误 → 修改代码 → 重跑"""
+    from llm import ZhipuClient
+    from prompts import CODE_REPAIR_PROMPT
+
+    state["sool_iteration"] += 1
+
+    # 1. Sense：收集错误信息
+    error_logs = "\n".join(state.get("execution_logs", []))
+    last_error = state.get("execution_result", {}).get("error", "")
+
+    # 2. Orient：LLM 分析根因（通过 CODE_REPAIR_PROMPT）
+    # 3. Act：LLM 生成修复后的代码
+    client = ZhipuClient(api_key=os.environ.get("ZHIPU_API_KEY"))
+
+    repaired_code = await client.repair_code(
+        original_code=state["generated_code"],
+        error_logs=f"迭代 {state['sool_iteration']}: {last_error}\n{error_logs}",
+        iteration=state["sool_iteration"],
+    )
+
+    state["generated_code"] = repaired_code
+    state["last_error"] = last_error
+
+    # 4. Learn：记录错误历史
+    if state.get("error_history") is None:
+        state["error_history"] = []
+    state["error_history"].append({
+        "iteration": state["sool_iteration"],
+        "error": last_error,
+        "action": "code_repair"
+    })
+
+    return state
+```
+
+### 7.5 常见场景处理
+
+| 场景 | 根因 | Orient 判断 | Act 行动 | Learn 记录 |
+|------|------|------------|---------|-----------|
+| 元素未找到 | 选择器失效 | "选择器变化，需更新" | 修改 selector，加 wait_for_selector | "该站用 data-id 而非 class" |
+| 执行超时 | 页面加载慢 | "加载时间长，需增加等待" | 增加超时时间，加显式等待 | "该站首屏加载需 5s+" |
+| 空数据 | 结构变化 | "DOM 结构已变化" | 重新分析 HTML，换提取逻辑 | "数据现在在 JSON-LD 中" |
+| 被封禁 | 反爬检测 | "触发反爬，需伪装" | 加随机 UA、延迟、代理 | "该站有 Cloudflare 保护" |
+| JSON 解析失败 | 输出格式错误 | "输出非有效 JSON" | 修复输出代码，加 try-except | "需确保输出是纯 JSON" |
+
+### 7.6 降级策略
+
+当 SOOAL 循环无法修复时（达到 5 轮上限）：
+
+```python
+# 降级到失败报告
+if state["sool_iteration"] >= 5:
+    state["stage"] = "failed"
+    state["final_report"] = {
+        "success": False,
+        "reason": "SOOAL_MAX_ITERATIONS",
+        "error_history": state["error_history"],
+        "last_error": state["last_error"],
+        "recommendation": "建议人工介入或尝试其他策略"
+    }
+    return state  # 直接结束，不再继续
+```
+
+---
+
+## 8. Long-term Memory
 
 ### 7.1 RAG 记忆库
 
@@ -751,7 +999,462 @@ class ReconMemory:
 
 ---
 
-## 8. Deployment
+## 9. Orchestrator 交互协议
+
+Agent 与 Orchestrator 之间的通信协议，定义任务下发、进度回调、结果返回的格式。
+
+### 9.1 任务下发格式
+
+Orchestrator → Agent：
+
+```python
+{
+    # 必填字段
+    "task_id": "recon_20250221_abc123",
+    "site_url": "https://example.com/products",
+    "user_goal": "提取所有商品的标题、价格、库存、图片链接",
+
+    # 可选字段
+    "max_samples": 50,           # 最大采样数量
+    "timeout": 300,              # 单次执行超时（秒）
+    "priority": "normal",        # 任务优先级：low/normal/high
+    "callback_url": None,        # 回调地址（异步模式）
+    "metadata": {                # 额外元信息
+        "domain": "example.com",
+        "category": "ecommerce"
+    }
+}
+```
+
+### 9.2 进度回调事件
+
+Agent → Orchestrator（实时推送）：
+
+```python
+# 阶段开始
+{
+    "event_type": "stage_start",
+    "task_id": "recon_20250221_abc123",
+    "agent_id": "agent_xyz",
+    "stage": "sense",            # sense/plan/act/verify/report
+    "timestamp": "2025-02-21T10:30:00Z"
+}
+
+# 阶段完成
+{
+    "event_type": "stage_complete",
+    "task_id": "recon_20250221_abc123",
+    "agent_id": "agent_xyz",
+    "stage": "plan",
+    "duration_ms": 3500,
+    "output": {
+        "code_generated": true,
+        "code_length": 1247
+    },
+    "timestamp": "2025-02-21T10:30:05Z"
+}
+
+# SOOAL 触发
+{
+    "event_type": "soal_started",
+    "task_id": "recon_20250221_abc123",
+    "agent_id": "agent_xyz",
+    "iteration": 1,
+    "error": "SelectorTimeoutError: .product-list not found",
+    "timestamp": "2025-02-21T10:30:15Z"
+}
+
+# 进度更新
+{
+    "event_type": "progress",
+    "task_id": "recon_20250221_abc123",
+    "agent_id": "agent_xyz",
+    "message": "正在提取第 2 页数据...",
+    "progress_percent": 40,
+    "timestamp": "2025-02-21T10:30:20Z"
+}
+```
+
+### 9.3 最终结果返回
+
+Agent → Orchestrator（任务完成）：
+
+```python
+# 成功
+{
+    "event_type": "task_complete",
+    "task_id": "recon_20250221_abc123",
+    "agent_id": "agent_xyz",
+    "success": true,
+    "duration_seconds": 127,
+    "stage": "done",
+
+    "result": {
+        "site_info": {
+            "url": "https://example.com/products",
+            "title": "Products - Example Store",
+            "detected_features": ["pagination", "grid-layout", "lazy-load"],
+            "anti_crawl_level": "low"
+        },
+        "data_info": {
+            "estimated_total": 5000,
+            "sample_count": 47,
+            "quality_score": 0.92
+        },
+        "sample_data": [
+            {
+                "title": "Product A",
+                "price": 199.99,
+                "stock": "In Stock",
+                "image_url": "https://example.com/img/a.jpg"
+            },
+            # ... more samples
+        ],
+        "generated_code": "async def scrape...",
+        "execution_summary": {
+            "sool_iterations": 1,
+            "pages_visited": 2,
+            "extraction_success_rate": 0.95
+        }
+    },
+    "timestamp": "2025-02-21T10:32:00Z"
+}
+
+# 失败
+{
+    "event_type": "task_failed",
+    "task_id": "recon_20250221_abc123",
+    "agent_id": "agent_xyz",
+    "success": false,
+    "stage": "failed",
+    "error": {
+        "type": "SOOAL_MAX_ITERATIONS",
+        "message": "无法修复选择器错误，达到最大迭代次数",
+        "last_error": "SelectorTimeoutError: .product-list not found",
+        "error_history": [
+            {"iteration": 1, "error": "..."},
+            {"iteration": 2, "error": "..."}
+        ]
+    },
+    "partial_result": {
+        "site_info": {...},
+        "sample_data": []  # 部分成功的数据
+    },
+    "timestamp": "2025-02-21T10:32:00Z"
+}
+```
+
+### 9.4 通信模式
+
+| 模式 | 说明 | 适用场景 |
+|------|------|---------|
+| **同步调用** | Orchestrator 等待 Agent 返回结果 | 单站侦察、批量任务 |
+| **异步回调** | Agent 通过 webhook 推送事件 | 长时间任务、实时监控 |
+| **流式输出** | Agent 实时推送各节点结果 | 调试模式、演示场景 |
+
+### 9.5 状态同步
+
+```python
+# Agent 内部状态（LangGraph State）
+ReconState = {
+    "stage": "act",              # 当前阶段
+    "sool_iteration": 2,         # SOOAL 迭代次数
+    "last_error": None,          # 最后的错误
+}
+
+# 暴露给 Orchestrator 的状态摘要
+def get_status_summary(state: ReconState) -> dict:
+    return {
+        "task_id": state["task_id"],
+        "agent_id": state.get("agent_id"),
+        "stage": state["stage"],
+        "progress": calculate_progress(state),
+        "sool_active": state["sool_iteration"] > 0,
+        "can_continue": state["stage"] not in ["done", "failed"]
+    }
+```
+
+---
+
+## 10. 错误处理策略
+
+### 10.1 各节点错误处理
+
+| 节点 | 错误类型 | 处理策略 | 是否重试 |
+|------|---------|---------|---------|
+| **Sense** | 网络超时 | 换用 Firecrawl API | ✅ 1 次 |
+| **Sense** | 页面 404 | 标记失败，返回报告 | ❌ |
+| **Plan** | LLM 调用失败 | 重试 LLM 调用 | ✅ 3 次 |
+| **Plan** | 代码为空 | 用模板代码 | ✅ 1 次 |
+| **Act** | 执行超时 | 进入 SOOAL 增加超时 | ✅ |
+| **Act** | 选择器失效 | 进入 SOOAL 修复代码 | ✅ |
+| **Act** | 沙箱崩溃 | 重启沙箱，重新执行 | ✅ 1 次 |
+| **Verify** | 质量分数 < 0.6 | 返回 Plan 重新生成 | ✅ |
+| **Report** | LLM 生成失败 | 用模板报告 | ✅ 1 次 |
+
+### 10.2 超时策略
+
+```python
+TIMEOUT_CONFIG = {
+    "sense": 30,       # 快速探测，30 秒
+    "plan": 60,        # LLM 生成代码，60 秒
+    "act": 300,        # 沙箱执行，5 分钟
+    "verify": 30,      # 质量评估，30 秒
+    "report": 60,      # 报告生成，60 秒
+    "total": 1800,     # 整体任务，30 分钟
+}
+
+# 超时后的处理
+async def handle_timeout(stage: str, state: ReconState):
+    if stage == "act":
+        # Act 超时，SOOAL 尝试增加超时时间
+        state["generated_code"] = inject_timeout_increase(
+            state["generated_code"],
+            new_timeout=600
+        )
+        return state
+    else:
+        # 其他阶段超时，记录并返回
+        return await generate_failure_report(
+            state, reason="TIMEOUT", stage=stage
+        )
+```
+
+### 10.3 降级方案
+
+当主要策略失败时的降级方案：
+
+| 场景 | 主策略 | 降级策略 |
+|------|-------|---------|
+| Playwright 失败 | BrowserTool（Playwright） | Firecrawl API |
+| LLM 代码生成失败 | GLM-4.7 生成 | 用预置模板 |
+| 沙箱执行失败 | Docker 沙箱 | SimpleSandbox（本地） |
+| 质量评估失败 | LLM 评估 | 基于规则打分 |
+| 报告生成失败 | LLM 生成 | JSON 格式报告 |
+
+### 10.4 错误分类与处理
+
+```python
+class ErrorType(Enum):
+    """错误类型分类"""
+    RECOVERABLE = "recoverable"      # 可恢复：SOOAL 处理
+    RETRYABLE = "retryable"          # 可重试：直接重试
+    FATAL = "fatal"                  # 致命：直接失败
+
+def classify_error(error: Exception) -> ErrorType:
+    """错误分类"""
+    if isinstance(error, (SelectorError, TimeoutError)):
+        return ErrorType.RECOVERABLE
+    elif isinstance(error, (NetworkError, LLMRateLimitError)):
+        return ErrorType.RETRYABLE
+    else:
+        return ErrorType.FATAL
+```
+
+### 10.5 错误上报格式
+
+```python
+{
+    "error_event": {
+        "task_id": "recon_abc",
+        "agent_id": "agent_xyz",
+        "stage": "act",
+        "error_type": "SelectorTimeoutError",
+        "error_message": ".product-list not found after 30s",
+        "stack_trace": "...",            # 开发模式下包含
+        "context": {
+            "url": "https://example.com",
+            "selector": ".product-list",
+            "page_source_snippet": "..."
+        },
+        "handling_action": "sool_triggered",
+        "timestamp": "2025-02-21T10:30:00Z"
+    }
+}
+```
+
+---
+
+## 11. 完整案例演示
+
+### 11.1 任务输入
+
+```python
+task = {
+    "site_url": "https://books.toscrape.com/",
+    "user_goal": "提取所有图书的标题、价格、库存状态、星级评分"
+}
+```
+
+### 11.2 Sense 阶段输出
+
+```python
+{
+    "stage": "sense",
+    "site_context": {
+        "title": "Books to Scrape - We love being scraped!",
+        "url": "https://books.toscrape.com/",
+        "status_code": 200
+    },
+    "detected_features": [
+        "product-grid",      # 网格布局
+        "pagination",        # 分页导航
+        "rating-stars",      # 星级评分
+        "price-display"      # 价格显示
+    ],
+    "html_snapshot": "<html>...</html>"  # 前 5000 字符
+}
+```
+
+### 11.3 Plan 阶段输出
+
+```python
+{
+    "stage": "plan",
+    "plan_reasoning": "检测到产品网格布局，使用 CSS 选择器 .product_pod 提取",
+    "generated_code": '''
+async def scrape(url: str) -> dict:
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        page = await browser.new_page()
+        await page.goto(url)
+
+        # 等待产品加载
+        await page.wait_for_selector(".product_pod")
+
+        results = []
+        products = await page.query_selector_all(".product_pod")
+
+        for product in products:
+            title = await product.query_selector(".product_title")
+            price = await product.query_selector(".price_color")
+            stock = await product.query_selector(".instockavailability")
+            rating = await product.query_selector("[class*='star-rating']")
+
+            results.append({
+                "title": await title.inner_text() if title else "",
+                "price": await price.inner_text() if price else "",
+                "stock": await stock.inner_text() if stock else "",
+                "rating": await rating.get_attribute("class") if rating else ""
+            })
+
+        await browser.close()
+        return {"results": results, "metadata": {"total": len(results)}}
+'''
+}
+```
+
+### 11.4 Act 阶段输出
+
+```python
+{
+    "stage": "act",
+    "execution_result": {
+        "success": true,
+        "stdout": '{"results": [...], "metadata": {"total": 20}}',
+        "stderr": "",
+        "returncode": 0
+    },
+    "parsed_data": {
+        "results": [
+            {
+                "title": "A Light in the Attic",
+                "price": "£51.77",
+                "stock": "In stock",
+                "rating": "star-rating Three"
+            },
+            # ... 19 more items
+        ],
+        "metadata": {"total": 20}
+    },
+    "sool_iteration": 0
+}
+```
+
+### 11.5 Verify 阶段输出
+
+```python
+{
+    "stage": "verify",
+    "quality_score": 0.95,
+    "quality_issues": [],
+    "sample_data": [  # 提取的样本
+        {
+            "title": "A Light in the Attic",
+            "price": "£51.77",
+            "stock": "In stock",
+            "rating": "Three"
+        }
+    ]
+}
+```
+
+### 11.6 Report 阶段输出
+
+```python
+{
+    "stage": "done",
+    "final_report": {
+        "site_info": {
+            "url": "https://books.toscrape.com/",
+            "title": "Books to Scrape",
+            "type": "电商/图书",
+            "features": ["产品网格", "分页", "星级评分"]
+        },
+        "data_info": {
+            "estimated_total": 1000,      # 基于 50 页 × 20 本/页
+            "sample_count": 20,
+            "quality_score": 0.95,
+            "fields": ["title", "price", "stock", "rating"]
+        },
+        "sample_data": [...],  # 20 本书的完整数据
+        "crawling_strategy": {
+            "recommended_method": "playwright",
+            "pagination": "?page=1,2,3...",
+            "anti_crawl": "none"
+        }
+    },
+    "markdown_report": """
+# 网站数据侦察报告
+
+## 站点信息
+- URL: https://books.toscrape.com/
+- 类型: 电商/图书
+
+## 侦察总结
+- 估算总量: ~1000 条
+- 样本质量: 0.95/1.0
+- 数据结构: 高度结构化
+
+## 真实样本预览
+1. A Light in the Attic - £51.77 - In stock - Three
+2. Tipping the Velvet - £53.74 - In stock - One
+...
+"""
+}
+```
+
+### 11.7 SOOAL 场景示例
+
+假设 Act 阶段选择器 `.product_pod` 失效：
+
+```
+第 1 次 Act 失败 → SelectorTimeoutError
+    ↓
+SOOAL Sense: 收集错误 "SelectorTimeoutError: .product_pod not found"
+    ↓
+SOOAL Orient: LLM 分析 → "选择器可能已变化，尝试 article.product_pod"
+    ↓
+SOOAL Act: 修改代码为 `article.product_pod`
+    ↓
+第 2 次 Act → 成功！
+    ↓
+继续 Verify → Report
+```
+
+---
+
+## 12. Deployment
 
 ### 8.1 Dockerfile
 
@@ -863,6 +1566,15 @@ recon_graph = graph.compile()
 
 ---
 
-**Document Version**: 3.0.0
+**Document Version**: 3.1.0
 **Last Updated**: 2026-02-21
-**Key Changes**: Hybrid 架构，LangGraph 状态机，代码生成+沙箱执行
+**Key Changes**:
+- 新增 SOOAL 自修复循环独立章节
+- 新增 Orchestrator 交互协议
+- 新增错误处理策略
+- 新增完整案例演示
+- 新增读者指南
+
+**Changelog**:
+- v3.1.0: 完善文档结构，添加协议和案例
+- v3.0.0: Hybrid 架构，LangGraph 状态机，代码生成+沙箱执行

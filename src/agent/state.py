@@ -104,29 +104,47 @@ def create_initial_state(
 # ===== 辅助函数 =====
 
 def should_run_sool(state: ReconState) -> str:
-    """判断是否需要 SOOAL 修复"""
-    if not state.get("execution_result"):
-        return "sool"
+    """判断是否需要 SOOAL 修复
 
-    if state["execution_result"].get("success"):
+    Returns:
+        "soal" - 执行失败，需要修复
+        "verify" - 执行成功，继续验证
+    """
+    execution_result = state.get("execution_result")
+
+    # 如果没有执行结果，需要 SOOAL
+    if not execution_result:
+        return "soal"
+
+    # 执行成功，跳过 SOOAL
+    if execution_result.get("success"):
         return "verify"
 
-    # 检查错误是否可修复
-    error = state["execution_result"].get("error")
-    if error and state["sool_iteration"] < 6:
-        return "sool"
+    # 执行失败，检查迭代次数
+    error = execution_result.get("error")
+    if error and state.get("sool_iteration", 0) < 6:
+        return "soal"
 
+    # 超过最大迭代次数，直接验证
     return "verify"
 
 
 def should_retry(state: ReconState) -> str:
-    """判断是否需要重试"""
+    """判断是否需要重试
+
+    Returns:
+        "report" - 质量合格或达到最大迭代，生成报告
+        "retry" - 质量不合格且未达到最大迭代，重新生成代码
+    """
     quality = state.get("quality_score", 0)
 
+    # 质量合格，生成报告
     if quality >= 0.6:
         return "report"
 
-    if state["sool_iteration"] >= 6:
-        return "report"  # 放弃重试，直接报告
+    # 达到最大迭代次数，生成报告
+    if state.get("sool_iteration", 0) >= 6:
+        return "report"
 
+    # 质量不合格且未达到最大迭代，重试
     return "retry"
