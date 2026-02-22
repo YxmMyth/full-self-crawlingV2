@@ -1,0 +1,112 @@
+{
+  "stage": "done",
+  "quality_score": 0,
+  "sample_data": [],
+  "sool_iteration": 6,
+  "failure_history": [
+    {
+      "iteration": 1,
+      "failure_type": "unknown",
+      "root_cause": "'NoneType' object is not subscriptable",
+      "suggested_fix": "检查错误信息",
+      "data_count": 0
+    },
+    {
+      "iteration": 3,
+      "failure_type": "selector_error",
+      "root_cause": "目标页面（Datawrapper features页）是一个高度动态的页面，包含大量的图表示例。虽然代码执行成功且无报错，但提取数据为0，说明选择器 `page.locator('svg')` 未能匹配到预期的图表SVG元素。这通常是因为：1. 图表被封装在 `<iframe>` 标签中，Playwright 默认只在主文档上下文中查找，无法穿透 iframe；2. 页面采用了深度的懒加载机制，简单的滚动操作未能触发图表区域的渲染；3. 页面中的 SVG 可能是以背景图或 CSS 形式存在，而非独立的 `<svg>` 标签。",
+      "suggested_fix": "1. **处理 iframe**：遍历 `page.frames()`，在每个 iframe 上下文中执行 SVG 查找逻辑；2. **改进等待策略**：放弃单纯的 `networkidle`，改用 `page.wait_for_selector('iframe, svg', state='attached', timeout=30000)` 确保关键元素已加载；3. **增强滚动交互**：模拟更细致的分段滚动，并在每次滚动后增加等待时间，确保触发懒加载；4. **调试 DOM**：在提取前打印 `page.content()` 或截图，确认当前 DOM 结构中是否存在 SVG。",
+      "avoid_repeat": "避免在未确认 DOM 结构的情况下盲目使用通用选择器（如 'svg'）。对于包含嵌入内容的页面，必须优先检查 iframe 或 Shadow DOM，并使用更具体的等待条件代替通用的网络空闲等待。",
+      "data_count": 0,
+      "website_type": "ecommerce",
+      "anti_bot_level": "low",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      }
+    }
+  ],
+  "reflection_memory": [
+    "执行失败: 'NoneType' object is not subscriptable，数据量: 0",
+    "```json\n{\n    \"failure_type\": \"selector_error\",\n    \"root_cause\": \"目标页面（Datawrapper features页）是一个高度动态的页面，包含大量的图表示例。虽然代码执行成功且无报错，但提取数据为0，说明选择器 `page.locator('svg')` 未能匹配到预期的图表SVG元素。这通常是因为：1. 图表被封装在 `<iframe>` 标签中，Playwright 默认只在主文档上下文中查找，无法穿透 iframe；2. 页面采用了深度的懒加载机制，简单的滚动操作未能触发图表区域的渲染；3. 页面中的 SVG 可能是以背景图或 CSS 形式存在，而非独立的 `<svg>` 标签。\",\n    \"suggested_fix\": \"1. **处理 iframe**：遍历 `page.frames()`，在每个 iframe 上下文中执行 SVG 查找逻辑；2. **改进等待策略**：放弃单纯的 `networkidle`，改用 `page.wait_for_selector('iframe, svg', state='attached', timeout=30000)` 确保关键元素已加载；3. **增强滚动交互**：模拟更细致的分段滚动，并在每次滚动后增加等待时间，确保触发懒加载；4. **调试 DOM**：在提取前打印 `page.content()` 或截图，确认当前 DOM 结构中是否存在 SVG。\",\n    \"avoid_repeat\": \"避免在未确认 DOM 结构的情况下盲目使用通用选择器（如 'svg'）。对于包含嵌入内容的页面，必须优先检查 iframe 或 Shadow DOM，并使用更具体的等待条件代替通用的网络空闲等待。\"\n}\n```"
+  ],
+  "attempt_signatures": [
+    "d465b26e",
+    "318a29dc"
+  ],
+  "quality_issues": [
+    "Խϵ: 0ֱֶοȱʧ"
+  ],
+  "agent_result": {
+    "success": true,
+    "agent_id": "agent_d34388cb",
+    "site_url": "https://www.datawrapper.de/",
+    "user_goal": "数据可视化图表站（SVG代码）",
+    "report": {
+      "site_url": "https://www.datawrapper.de/features",
+      "user_goal": "数据可视化图表站（SVG代码）",
+      "quality_score": 0,
+      "sample_data": [],
+      "generated_code": "from playwright.sync_api import sync_playwright\nimport json\nimport time\nimport random\n\nUSER_AGENTS = [\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\",\n    \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\",\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0\"\n]\n\ndef scrape(url: str) -> dict:\n    results = []\n    browser = None\n    try:\n        with sync_playwright() as p:\n            browser = p.chromium.launch(\n                headless=True,\n                args=[\"--disable-blink-features=AutomationControlled\"]\n            )\n            page = browser.new_page(\n                user_agent=random.choice(USER_AGENTS),\n                viewport={\"width\": 1920, \"height\": 1080}\n            )\n\n            # 访问页面，使用 networkidle 等待动态资源加载\n            page.goto(url, wait_until='networkidle', timeout=60000)\n\n            # 等待关键元素\n            try:\n                page.wait_for_selector('body', timeout=10000)\n            except:\n                pass\n\n            # 模拟人类滚动行为，触发懒加载和 iframe 渲染\n            # Datawrapper features 页面较长，图表可能需要滚动才能加载\n            for _ in range(5):\n                page.mouse.wheel(0, 1000)\n                time.sleep(random.uniform(0.5, 1.0))\n            \n            # 回到顶部，确保顶部元素也被加载\n            page.evaluate(\"window.scrollTo(0, 0)\")\n            time.sleep(1)\n\n            # === 数据提取 ===\n            \n            # 策略 1: 尝试从 iframe 中提取 SVG (针对上次失败原因的修复)\n            # 很多图表网站使用 iframe 封装图表\n            try:\n                iframes = page.locator('iframe').all()\n                for iframe in iframes:\n                    try:\n                        frame = iframe.content_frame()\n                        if frame:\n                            # 等待 frame 内部加载 SVG\n                            try:\n                                frame.wait_for_selector('svg', timeout=2000)\n                                svgs = frame.locator('svg').all()\n                                for svg in svgs:\n                                    # 获取 SVG 完整代码\n                                    svg_code = svg.evaluate(\"el => el.outerHTML\")\n                                    if svg_code and \"<svg\" in svg_code:\n                                        results.append({\n                                            \"type\": \"svg_chart\",\n                                            \"source\": \"iframe\",\n                                            \"content\": svg_code\n                                        })\n                            except:\n                                continue\n                    except Exception:\n                        continue\n            except Exception:\n                pass\n\n            # 策略 2: 尝试直接在主文档中提取 SVG (如果是内联 SVG)\n            if not results:\n                try:\n                    svgs = page.locator('svg').all()\n                    for svg in svgs:\n                        try:\n                            svg_code = svg.evaluate(\"el => el.outerHTML\")\n                            if svg_code and len(svg_code) > 100: # 过滤掉小图标\n                                results.append({\n                                    \"type\": \"svg_chart\",\n                                    \"source\": \"inline\",\n                                    \"content\": svg_code\n                                })\n                        except:\n                            continue\n                except Exception:\n                    pass\n\n            # 策略 3: 使用已验证的选择器 link[href$=\".svg\"]\n            # 如果图表 SVG 难以提取，至少提取相关的 SVG 资源链接\n            try:\n                svg_links = page.locator('link[href$=\".svg\"]').all()\n                for link in svg_links:\n                    try:\n                        href = link.get_attribute('href')\n                        if href:\n                            results.append({\n                                \"type\": \"svg_resource\",\n                                \"source\": \"link_tag\",\n                                \"url\": href\n                            })\n                    except:\n                        continue\n            except Exception:\n                pass\n\n            # 策略 4: 尝试查找通用的卡片容器，获取文本信息作为补充\n            # 尝试建议的选择器 .card, .item, [data-id]\n            selectors_to_try = [\".card\", \".item\", \"[data-id]\", \"article\"]\n            for sel in selectors_to_try:\n                if len(results) >= 10: # 如果已经有足够数据，停止尝试\n                    break\n                try:\n                    items = page.locator(sel).all()\n                    for item in items:\n                        try:\n                            text = item.text_content()\n                            if text and len(text.strip()) > 20:\n                                results.append({\n                                    \"type\": \"text_content\",\n                                    \"selector\": sel,\n                                    \"content\": text.strip()\n                                })\n                        except:\n                            continue\n                except:\n                    continue\n\n    except Exception as e:\n        error = str(e)\n        # 可以选择记录错误日志\n    finally:\n        if browser:\n            browser.close()\n\n    # 数据清洗和验证\n    # 去重，避免重复提取同一个 SVG\n    seen_contents = set()\n    valid_results = []\n    for r in results:\n        content_key = r.get(\"content\") or r.get(\"url\") or r.get(\"text\")\n        if content_key and content_key not in seen_contents:\n            seen_contents.add(content_key)\n            valid_results.append(r)\n\n    return {\n        \"results\": valid_results,\n        \"metadata\": {\n            \"total_extracted\": len(results),\n            \"valid_count\": len(valid_results),\n            \"url\": url\n        }\n    }\n\nif __name__ == \"__main__\":\n    import sys\n    url = sys.argv[1] if len(sys.argv) > 1 else \"https://www.datawrapper.de/features\"\n    result = scrape(url)\n    print(json.dumps(result, ensure_ascii=False, indent=2))"
+    },
+    "markdown_report": "```markdown\n# 网站数据侦察报告\n\n## 站点信息\n- URL: https://www.datawrapper.de/features\n- 用户需求: 数据可视化图表站（SVG代码）\n- 侦察时间: 2026-05-22\n\n## 侦察总结\n- 估算数据总量: ~0 条 (当前页面)\n- 样本质量分数: 0/1.0\n- 数据结构化程度: 低 (产品介绍页，非数据列表页)\n\n## 站点特征分析\n- 页面类型: 产品功能落地页\n- 分页方式: 无\n- 反爬等级: 低\n- 内容渲染: 静态 HTML + 部分 iframe 嵌入\n\n## 真实样本预览\n```json\n[]\n```\n*(注：当前 URL 为功能介绍页，未发现直接可爬取的图表数据列表)*\n\n## 可爬性评估\n- 反爬等级: 低\n- 技术难度: 中等 (需定位 iframe 源或更换入口)\n- 推荐策略: \n  1. **更换目标 URL**: 当前页面 (`/features`) 仅包含功能描述和少量演示 iframe，不包含图表库。建议访问 Datawrapper 的图表库页面 (如 `/gallery` 或 `/examples`)。\n  2. **解析 iframe 链接**: 若必须从此页面获取，需解析页面中嵌入的 `iframe src` 属性，通常指向 `datawrapper.dwcdn.net` 域名。\n  3. **SVG 获取方式**: Datawrapper 的 SVG 代码通常存储在图表 iframe 的 `svg` 标签中，需进入具体的图表详情页或 iframe 内部提取。\n  4. **API 探索**: Datawrapper 部分公开图表可能存在公开 API 接口，建议进一步抓包分析。\n```",
+    "generated_code": "from playwright.sync_api import sync_playwright\nimport json\nimport time\nimport random\n\nUSER_AGENTS = [\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\",\n    \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\",\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0\"\n]\n\ndef scrape(url: str) -> dict:\n    results = []\n    browser = None\n    try:\n        with sync_playwright() as p:\n            browser = p.chromium.launch(\n                headless=True,\n                args=[\"--disable-blink-features=AutomationControlled\"]\n            )\n            page = browser.new_page(\n                user_agent=random.choice(USER_AGENTS),\n                viewport={\"width\": 1920, \"height\": 1080}\n            )\n\n            # 访问页面，使用 networkidle 等待动态资源加载\n            page.goto(url, wait_until='networkidle', timeout=60000)\n\n            # 等待关键元素\n            try:\n                page.wait_for_selector('body', timeout=10000)\n            except:\n                pass\n\n            # 模拟人类滚动行为，触发懒加载和 iframe 渲染\n            # Datawrapper features 页面较长，图表可能需要滚动才能加载\n            for _ in range(5):\n                page.mouse.wheel(0, 1000)\n                time.sleep(random.uniform(0.5, 1.0))\n            \n            # 回到顶部，确保顶部元素也被加载\n            page.evaluate(\"window.scrollTo(0, 0)\")\n            time.sleep(1)\n\n            # === 数据提取 ===\n            \n            # 策略 1: 尝试从 iframe 中提取 SVG (针对上次失败原因的修复)\n            # 很多图表网站使用 iframe 封装图表\n            try:\n                iframes = page.locator('iframe').all()\n                for iframe in iframes:\n                    try:\n                        frame = iframe.content_frame()\n                        if frame:\n                            # 等待 frame 内部加载 SVG\n                            try:\n                                frame.wait_for_selector('svg', timeout=2000)\n                                svgs = frame.locator('svg').all()\n                                for svg in svgs:\n                                    # 获取 SVG 完整代码\n                                    svg_code = svg.evaluate(\"el => el.outerHTML\")\n                                    if svg_code and \"<svg\" in svg_code:\n                                        results.append({\n                                            \"type\": \"svg_chart\",\n                                            \"source\": \"iframe\",\n                                            \"content\": svg_code\n                                        })\n                            except:\n                                continue\n                    except Exception:\n                        continue\n            except Exception:\n                pass\n\n            # 策略 2: 尝试直接在主文档中提取 SVG (如果是内联 SVG)\n            if not results:\n                try:\n                    svgs = page.locator('svg').all()\n                    for svg in svgs:\n                        try:\n                            svg_code = svg.evaluate(\"el => el.outerHTML\")\n                            if svg_code and len(svg_code) > 100: # 过滤掉小图标\n                                results.append({\n                                    \"type\": \"svg_chart\",\n                                    \"source\": \"inline\",\n                                    \"content\": svg_code\n                                })\n                        except:\n                            continue\n                except Exception:\n                    pass\n\n            # 策略 3: 使用已验证的选择器 link[href$=\".svg\"]\n            # 如果图表 SVG 难以提取，至少提取相关的 SVG 资源链接\n            try:\n                svg_links = page.locator('link[href$=\".svg\"]').all()\n                for link in svg_links:\n                    try:\n                        href = link.get_attribute('href')\n                        if href:\n                            results.append({\n                                \"type\": \"svg_resource\",\n                                \"source\": \"link_tag\",\n                                \"url\": href\n                            })\n                    except:\n                        continue\n            except Exception:\n                pass\n\n            # 策略 4: 尝试查找通用的卡片容器，获取文本信息作为补充\n            # 尝试建议的选择器 .card, .item, [data-id]\n            selectors_to_try = [\".card\", \".item\", \"[data-id]\", \"article\"]\n            for sel in selectors_to_try:\n                if len(results) >= 10: # 如果已经有足够数据，停止尝试\n                    break\n                try:\n                    items = page.locator(sel).all()\n                    for item in items:\n                        try:\n                            text = item.text_content()\n                            if text and len(text.strip()) > 20:\n                                results.append({\n                                    \"type\": \"text_content\",\n                                    \"selector\": sel,\n                                    \"content\": text.strip()\n                                })\n                        except:\n                            continue\n                except:\n                    continue\n\n    except Exception as e:\n        error = str(e)\n        # 可以选择记录错误日志\n    finally:\n        if browser:\n            browser.close()\n\n    # 数据清洗和验证\n    # 去重，避免重复提取同一个 SVG\n    seen_contents = set()\n    valid_results = []\n    for r in results:\n        content_key = r.get(\"content\") or r.get(\"url\") or r.get(\"text\")\n        if content_key and content_key not in seen_contents:\n            seen_contents.add(content_key)\n            valid_results.append(r)\n\n    return {\n        \"results\": valid_results,\n        \"metadata\": {\n            \"total_extracted\": len(results),\n            \"valid_count\": len(valid_results),\n            \"url\": url\n        }\n    }\n\nif __name__ == \"__main__\":\n    import sys\n    url = sys.argv[1] if len(sys.argv) > 1 else \"https://www.datawrapper.de/features\"\n    result = scrape(url)\n    print(json.dumps(result, ensure_ascii=False, indent=2))",
+    "stage": "done",
+    "final_state": {
+      "stage": "done",
+      "quality_score": 0,
+      "sample_data": [],
+      "sool_iteration": 6,
+      "failure_history": [
+        {
+          "iteration": 1,
+          "failure_type": "unknown",
+          "root_cause": "'NoneType' object is not subscriptable",
+          "suggested_fix": "检查错误信息",
+          "data_count": 0
+        },
+        {
+          "iteration": 3,
+          "failure_type": "selector_error",
+          "root_cause": "目标页面（Datawrapper features页）是一个高度动态的页面，包含大量的图表示例。虽然代码执行成功且无报错，但提取数据为0，说明选择器 `page.locator('svg')` 未能匹配到预期的图表SVG元素。这通常是因为：1. 图表被封装在 `<iframe>` 标签中，Playwright 默认只在主文档上下文中查找，无法穿透 iframe；2. 页面采用了深度的懒加载机制，简单的滚动操作未能触发图表区域的渲染；3. 页面中的 SVG 可能是以背景图或 CSS 形式存在，而非独立的 `<svg>` 标签。",
+          "suggested_fix": "1. **处理 iframe**：遍历 `page.frames()`，在每个 iframe 上下文中执行 SVG 查找逻辑；2. **改进等待策略**：放弃单纯的 `networkidle`，改用 `page.wait_for_selector('iframe, svg', state='attached', timeout=30000)` 确保关键元素已加载；3. **增强滚动交互**：模拟更细致的分段滚动，并在每次滚动后增加等待时间，确保触发懒加载；4. **调试 DOM**：在提取前打印 `page.content()` 或截图，确认当前 DOM 结构中是否存在 SVG。",
+          "avoid_repeat": "避免在未确认 DOM 结构的情况下盲目使用通用选择器（如 'svg'）。对于包含嵌入内容的页面，必须优先检查 iframe 或 Shadow DOM，并使用更具体的等待条件代替通用的网络空闲等待。",
+          "data_count": 0,
+          "website_type": "ecommerce",
+          "anti_bot_level": "low",
+          "attempted_strategies": [
+            "validated_selectors"
+          ],
+          "partial_success": {
+            "partial_success": true,
+            "success_rate": 1.0,
+            "issues": [],
+            "strengths": [
+              "Code executed successfully"
+            ],
+            "recommendations": []
+          }
+        }
+      ],
+      "reflection_memory": [
+        "执行失败: 'NoneType' object is not subscriptable，数据量: 0",
+        "```json\n{\n    \"failure_type\": \"selector_error\",\n    \"root_cause\": \"目标页面（Datawrapper features页）是一个高度动态的页面，包含大量的图表示例。虽然代码执行成功且无报错，但提取数据为0，说明选择器 `page.locator('svg')` 未能匹配到预期的图表SVG元素。这通常是因为：1. 图表被封装在 `<iframe>` 标签中，Playwright 默认只在主文档上下文中查找，无法穿透 iframe；2. 页面采用了深度的懒加载机制，简单的滚动操作未能触发图表区域的渲染；3. 页面中的 SVG 可能是以背景图或 CSS 形式存在，而非独立的 `<svg>` 标签。\",\n    \"suggested_fix\": \"1. **处理 iframe**：遍历 `page.frames()`，在每个 iframe 上下文中执行 SVG 查找逻辑；2. **改进等待策略**：放弃单纯的 `networkidle`，改用 `page.wait_for_selector('iframe, svg', state='attached', timeout=30000)` 确保关键元素已加载；3. **增强滚动交互**：模拟更细致的分段滚动，并在每次滚动后增加等待时间，确保触发懒加载；4. **调试 DOM**：在提取前打印 `page.content()` 或截图，确认当前 DOM 结构中是否存在 SVG。\",\n    \"avoid_repeat\": \"避免在未确认 DOM 结构的情况下盲目使用通用选择器（如 'svg'）。对于包含嵌入内容的页面，必须优先检查 iframe 或 Shadow DOM，并使用更具体的等待条件代替通用的网络空闲等待。\"\n}\n```"
+      ],
+      "attempt_signatures": [
+        "d465b26e",
+        "318a29dc"
+      ],
+      "quality_issues": [
+        "Խϵ: 0ֱֶοȱʧ"
+      ]
+    }
+  }
+}

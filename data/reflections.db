@@ -1,0 +1,687 @@
+{
+  "reflections": [
+    {
+      "timestamp": "2026-02-22T19:08:51.285353",
+      "url": "https://example.com",
+      "domain": "example.com",
+      "website_type": "ecommerce",
+      "anti_bot_level": "medium",
+      "failure_type": "selector_error",
+      "root_cause": "CSS selector did not match",
+      "suggested_fix": "Use more specific selector",
+      "attempted_strategies": [
+        "basic_playwright"
+      ],
+      "partial_success_data": {
+        "partial_success": true,
+        "success_rate": 0.5
+      },
+      "execution_success": false,
+      "data_extracted": 0
+    },
+    {
+      "timestamp": "2026-02-22T20:54:54.111795",
+      "url": "https://techcrunch.com",
+      "domain": "techcrunch.com",
+      "website_type": "ecommerce",
+      "anti_bot_level": "high",
+      "failure_type": "selector_error",
+      "root_cause": "TechCrunch 网站的前端结构发生了变化，代码中使用的旧版选择器（如 `.post-block`, `.post-block__title`）无法匹配当前页面的 DOM 元素。虽然代码逻辑正确执行且没有报错，但由于选择器失效，导致定位不到任何文章容器，从而提取数据量为 0。",
+      "suggested_fix": "1. 在抓取前增加调试步骤，保存页面截图（screenshot）或打印 HTML 片段，以确认页面是否正常加载以及当前的 DOM 结构。2. 使用更宽泛的通用选择器（如 `article` 标签、`h2 a`、`h3 a` 或 `a[href*='/2024/']`）来提高匹配率。3. 针对高反爬和 JS 重型网站，使用 `wait_for_load_state('networkidle')` 替代 `domcontentloaded`，确保动态新闻流完全渲染。",
+      "attempted_strategies": [],
+      "partial_success_data": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      },
+      "execution_success": true,
+      "data_extracted": 0
+    },
+    {
+      "timestamp": "2026-02-22T21:09:19.324677",
+      "url": "https://techcrunch.com",
+      "domain": "techcrunch.com",
+      "website_type": "ecommerce",
+      "anti_bot_level": "high",
+      "failure_type": "selector_error",
+      "root_cause": "The scraping logic relied on the specific CSS selector 'article.post-block', which is likely outdated or does not match the current DOM structure of the target website. Additionally, the wait condition 'domcontentloaded' is insufficient for a 'javascript_heavy' site with infinite scroll features, causing the extraction to run before the dynamic content is fully rendered into the DOM.",
+      "suggested_fix": "1. Change the wait strategy to 'wait_until=\"networkidle\"' or explicitly wait for a generic element like 'h2' or 'a' to ensure the page is fully rendered. 2. Replace the specific class selector with a more robust, generic strategy, such as locating all 'h2' or 'h3' tags that contain links, or searching for 'a' tags with href attributes matching the article URL pattern (e.g., 'a[href*=\"/202\"]'). 3. Add a debugging step to print page.title() or save page.content() to verify if the page is actually loading content or being blocked.",
+      "attempted_strategies": [],
+      "partial_success_data": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      },
+      "execution_success": true,
+      "data_extracted": 0
+    },
+    {
+      "timestamp": "2026-02-22T22:08:16.272400",
+      "url": "https://techcrunch.com",
+      "domain": "techcrunch.com",
+      "website_type": "unknown",
+      "anti_bot_level": "high",
+      "failure_type": "selector_error",
+      "root_cause": "TechCrunch 的 DOM 结构使用了动态类名或频繁更新的布局，导致之前使用的 CSS 选择器失效。虽然代码执行成功，但无法定位到新闻标题元素。此外，高等级的反爬虫机制可能导致页面返回了经过简化或拦截的 HTML（如 Cloudflare 挑战页面），而非预期的完整内容结构，从而导致选择器匹配失败。",
+      "suggested_fix": "1. 使用 Playwright 的 `wait_for_selector` 或 `wait_for_load_state('networkidle')` 确保页面完全渲染。\n2. 放弃依赖具体的 CSS 类名，改用更稳健的语义化标签组合，例如 `article h2 a` 或 `div[class*='post'] h2 a`。\n3. 添加反爬虫伪装，设置真实的浏览器 User-Agent 和视口大小，确保获取的是正常的新闻列表页面而非拦截页。\n4. 如果可能，尝试提取所有 `a` 标签并筛选包含 `/2024/` 或 `/2025/` 等日期路径的链接作为备选方案。",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success_data": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      },
+      "execution_success": true,
+      "data_extracted": 0
+    },
+    {
+      "timestamp": "2026-02-22T22:25:25.171456",
+      "url": "https://techcrunch.com",
+      "domain": "techcrunch.com",
+      "website_type": "ecommerce",
+      "anti_bot_level": "high",
+      "failure_type": "selector_error",
+      "root_cause": "代码过度依赖 `script[type=\"application/ld+json\"]` 中的 `ItemList` 结构来提取新闻。TechCrunch 的主页通常将文章列表渲染在标准 HTML DOM 中（如 `<h2>` 或 `<a>` 标签），而不是在主页的 JSON-LD 结构化数据中提供完整的文章列表。因此，虽然脚本成功执行并找到了 script 标签，但未能匹配到预期的数据结构，导致提取结果为空。",
+      "suggested_fix": "1. 放弃对 JSON-LD 的单一依赖，改用标准的 HTML CSS 选择器直接定位文章标题和链接（例如：`h2.post-block__title a` 或类似的类名）。2. 针对 'infinite_scroll' 特征，在页面加载后增加滚动逻辑（如 `page.evaluate('window.scrollTo(0, document.body.scrollHeight)')`）并等待新内容加载，以确保获取足够的新闻条目。3. 结合显式等待（`wait_for_selector`）确保文章元素已渲染完毕。",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success_data": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      },
+      "execution_success": true,
+      "data_extracted": 0
+    },
+    {
+      "timestamp": "2026-02-22T23:24:47.220936",
+      "url": "https://www.amazon.com/s?k=smartphone",
+      "domain": "www.amazon.com",
+      "website_type": "ecommerce",
+      "anti_bot_level": "high",
+      "failure_type": "blocked",
+      "root_cause": "Amazon 的高等级反爬虫系统检测到了自动化特征（特别是无头浏览器模式），导致页面被重定向到验证码（CAPTCHA）页面或“输入验证字符”的拦截页，而非正常的商品搜索结果页。此外，代码中使用的 `domcontentloaded` 等待策略对于 Amazon 这种重度依赖 JavaScript 动态渲染的网站来说过于激进，导致在商品列表完全加载前就尝试提取数据。",
+      "suggested_fix": "1. 绕过检测：尝试使用 `headless=False` 进行调试，或引入 `playwright-stealth` 插件/注入脚本覆盖 `navigator.webdriver` 属性以隐藏自动化特征。2. 优化等待策略：将 `page.goto` 的 `wait_until` 参数改为 `'networkidle'` 或 `'load'`，并增加 `wait_for_selector` 的超时时间，确保 DOM 元素已渲染。3. 拦截检测：在提取前增加逻辑检查页面标题或 body 是否包含 'captcha', 'robot', 'try again' 等关键词，若被拦截则抛出特定异常或重试。",
+      "attempted_strategies": [],
+      "partial_success_data": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      },
+      "execution_success": true,
+      "data_extracted": 0
+    },
+    {
+      "timestamp": "2026-02-22T23:29:57.858311",
+      "url": "https://www.amazon.com/s?k=smartphone",
+      "domain": "www.amazon.com",
+      "website_type": "ecommerce",
+      "anti_bot_level": "high",
+      "failure_type": "anti_bot",
+      "root_cause": "亚马逊的反爬虫系统检测到了Playwright的自动化特征（如headless模式或navigator.webdriver属性），导致页面重定向到CAPTCHA验证页或拦截页。因此，代码中等待的选择器 'div[data-component-type=\"s-search-result\"]' 超时未出现。虽然代码通过try-except捕获了异常并继续执行，但由于页面上没有产品列表，最终提取数据量为0。",
+      "suggested_fix": "1. 将headless设置为False，模拟真实用户操作。2. 在页面加载前注入JavaScript脚本，隐藏webdriver等自动化特征（例如覆盖navigator.webdriver）。3. 增加对CAPTCHA页面的检测逻辑，如果遇到验证码，尝试截图或人工介入（在非headless模式下）。4. 使用持久化上下文保存cookies，模拟老用户。",
+      "attempted_strategies": [],
+      "partial_success_data": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      },
+      "execution_success": true,
+      "data_extracted": 0
+    },
+    {
+      "timestamp": "2026-02-22T23:30:51.315307",
+      "url": "https://techcrunch.com/",
+      "domain": "techcrunch.com",
+      "website_type": "ecommerce",
+      "anti_bot_level": "high",
+      "failure_type": "selector_error",
+      "root_cause": "尽管代码执行成功，但使用的CSS选择器（`article.post-block`, `div.river__item`）与TechCrunch当前的实际DOM结构不匹配。由于网站被标记为'javascript_heavy'且具有'high'反爬虫等级，其DOM结构经常更新或使用动态生成的类名以防止爬取。此外，`wait_until='domcontentloaded'`可能不足以等待所有由JavaScript动态注入的新闻条目渲染完成，导致爬虫在内容加载前就尝试提取数据。",
+      "suggested_fix": "1. 使用更稳健的语义化选择器，避免依赖易变的类名。尝试使用通用的标签层级选择器，例如 `h2 a`, `h3 a` 或 `article a[href*='/202']`（针对年份链接），以捕获标题和链接。\n2. 改进等待策略，使用 `page.wait_for_load_state('networkidle')` 或显式等待通用的标题元素出现（如 `page.wait_for_selector('h2 a')`），确保JavaScript渲染完成。\n3. 针对'ecommerce'类列表页的特性，如果初始视口为空，增加页面滚动逻辑（`page.mouse.wheel(0, 1000)`）以触发懒加载。\n4. 添加调试信息，打印 `page.content()` 的片段以确认实际加载的HTML结构。",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success_data": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      },
+      "execution_success": true,
+      "data_extracted": 0
+    },
+    {
+      "timestamp": "2026-02-22T23:35:49.149625",
+      "url": "https://techcrunch.com/",
+      "domain": "techcrunch.com",
+      "website_type": "ecommerce",
+      "anti_bot_level": "high",
+      "failure_type": "selector_error",
+      "root_cause": "尽管代码执行成功，但提取结果为空。根本原因在于TechCrunch作为高反爬虫且重度JavaScript的网站，其DOM结构经常变动，且新闻内容极可能依赖于无限滚动机制。之前的尝试虽然建议了使用 `h2 a`，但如果页面初始加载时新闻条目并未渲染在视口内，或者网站使用了不同的标题层级（如 `h3`）或自定义组件（如 `h3.post-block__title`），单纯依赖 `h2` 标签会导致选择失败。此外，高反爬虫等级可能意味着默认的Playwright上下文被识别为机器人，返回了不包含新闻内容的简化版HTML。",
+      "suggested_fix": "1. 采用基于URL特征的稳健选择器：使用CSS选择器 `a[href*='/2024/']` 或 `a[href*='/2025/']` 直接匹配包含年份的新闻链接，这种方式不依赖于具体的HTML标签层级（如h2/h3），能更准确地定位新闻。\n2. 强制触发无限滚动：在提取数据前，执行循环滚动逻辑（如 `for _ in range(3): page.mouse.wheel(0, 1000); page.wait_for_timeout(1000)`），确保动态加载的内容进入DOM。\n3. 模拟真实用户环境：在 `browser.new_context()` 中设置最新的 User-Agent 字符串（例如模拟Chrome on Windows），并设置合理的 `viewport`，以降低被反爬虫系统识别为自动化脚本的风险。\n4. 使用更宽泛的语义化选择器组合：结合 `article h2 a`, `article h3 a`, 和 `.post-block a[href*='/202']` 进行多重尝试。",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success_data": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      },
+      "execution_success": true,
+      "data_extracted": 0
+    },
+    {
+      "timestamp": "2026-02-22T23:46:29.566695",
+      "url": "https://www.amazon.com/s?k=smartphone",
+      "domain": "www.amazon.com",
+      "website_type": "ecommerce",
+      "anti_bot_level": "high",
+      "failure_type": "selector_error",
+      "root_cause": "Amazon.com uses dynamic and obfuscated class names that change frequently. The CSS selectors used in the script likely do not match the current DOM structure of the search results page. Additionally, due to the high anti-bot level, the page might have rendered a CAPTCHA or a different layout that the script did not account for, resulting in zero matches for the expected product elements.",
+      "suggested_fix": "1. Update selectors to use more stable attributes like `data-component-type='s-search-result'` or `data-cy='title-recipe-title'` instead of generic class names. 2. Add a check for CAPTCHA presence (e.g., checking for 'Type the characters you see in this image' or 'Enter the characters you see below'). 3. Implement `page.wait_for_selector('[data-component-type=\"s-search-result\"]', timeout=10000)` to ensure elements are loaded before extraction.",
+      "attempted_strategies": [],
+      "partial_success_data": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      },
+      "execution_success": true,
+      "data_extracted": 0
+    },
+    {
+      "timestamp": "2026-02-22T23:54:55.014836",
+      "url": "https://www.amazon.com/s?k=smartphone",
+      "domain": "www.amazon.com",
+      "website_type": "ecommerce",
+      "anti_bot_level": "high",
+      "failure_type": "anti_bot",
+      "root_cause": "Amazon's high-level anti-scraping mechanisms (likely detecting automated browser fingerprints or IP reputation) served a CAPTCHA or 'Enter the characters you see below' challenge page instead of the product search results. The script executed without errors (returning a 200 OK), but because the DOM structure was replaced by a CAPTCHA page, the product selectors found zero matches, resulting in empty data extraction.",
+      "suggested_fix": "1. Implement a CAPTCHA detection step before extraction: check for specific keywords like 'Type the characters you see in this image', 'CAPTCHA', or the presence of captcha-related iframes. 2. Use `headless=False` (if environment permits) or apply stealth techniques to mask automation (e.g., randomizing User-Agent, hiding `navigator.webdriver`). 3. Add human-like interactions: random scrolling and delays (`page.wait_for_timeout`) before scraping to mimic user behavior. 4. Verify the page title contains 'Amazon.com : smartphone' to ensure we are on the correct page before parsing.",
+      "attempted_strategies": [],
+      "partial_success_data": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      },
+      "execution_success": true,
+      "data_extracted": 0
+    },
+    {
+      "timestamp": "2026-02-23T00:03:50.808576",
+      "url": "https://techcrunch.com/",
+      "domain": "techcrunch.com",
+      "website_type": "ecommerce",
+      "anti_bot_level": "high",
+      "failure_type": "selector_error",
+      "root_cause": "The CSS selectors used ('article', '.post-block', '.wp-block-post') did not match any elements on the TechCrunch homepage within the allocated timeframe. Although TechCrunch is a news site, the provided metadata labeled it as 'ecommerce', which might have caused the selection logic to be misaligned. The specific DOM structure likely requires more granular selectors (e.g., specific heading classes or WordPress Gutenberg block classes) or a longer wait time for JavaScript hydration, resulting in an empty list of items to extract from.",
+      "suggested_fix": "1. Update selectors to target more specific and resilient elements such as 'h2 a', '.post-block__title a', or 'a[href*=\"/2024/\"]'.\n2. Change the wait strategy from 'domcontentloaded' to 'networkidle' to ensure all dynamic content is loaded.\n3. Add a check for Cloudflare or anti-bot challenges (e.g., checking for 'Checking your browser' text) before attempting extraction.\n4. Implement a fallback mechanism to print page content if no items are found, for debugging selector issues.",
+      "attempted_strategies": [],
+      "partial_success_data": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      },
+      "execution_success": true,
+      "data_extracted": 0
+    },
+    {
+      "timestamp": "2026-02-23T00:05:35.128954",
+      "url": "https://www.datawrapper.de/",
+      "domain": "www.datawrapper.de",
+      "website_type": "unknown",
+      "anti_bot_level": null,
+      "failure_type": "empty_result",
+      "root_cause": "目标URL (https://www.datawrapper.de/) 是Datawrapper产品的营销主页，主要包含导航、登录入口和产品介绍，而非具体的SVG图表数据展示页。爬虫虽然成功执行了代码，但由于页面本身不包含预期的SVG图表元素，导致选择器匹配失败，提取数据量为0。",
+      "suggested_fix": "1. 重新定位目标URL：访问包含实际图表的页面，例如Datawrapper的社区示例页或具体的图表详情页。2. 更新选择器策略：如果必须在主页抓取，需检查主页DOM结构，确认是否存在嵌入式图表并调整CSS选择器。3. 增加页面导航逻辑：在代码中加入点击链接（如'Examples'或'Blog'）的动作，跳转到内容页后再进行提取。",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success_data": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      },
+      "execution_success": true,
+      "data_extracted": 0
+    },
+    {
+      "timestamp": "2026-02-23T00:07:13.192235",
+      "url": "https://techcrunch.com/",
+      "domain": "techcrunch.com",
+      "website_type": "ecommerce",
+      "anti_bot_level": "high",
+      "failure_type": "selector_error",
+      "root_cause": "代码中使用的CSS选择器（如 `.post-block`, `article`）与当前 TechCrunch 网站的实际DOM结构不匹配。TechCrunch 作为高反爬虫等级且重度依赖 JavaScript 的网站，其 DOM 结构经常更新或通过 A/B 测试呈现不同布局。此外，`wait_until='domcontentloaded'` 可能触发过早，导致动态加载的新闻内容尚未渲染，或者无头浏览器触发了反爬机制，导致返回的页面不包含预期的新闻容器。",
+      "suggested_fix": "1. **增强等待策略**：使用 `page.wait_for_load_state('networkidle')` 或增加显式等待时间（如 3-5秒），确保动态内容加载完毕。\n2. **通用选择器策略**：放弃依赖特定的容器类（如 `.post-block`），改用更通用的标签定位，例如查找所有的 `h2` 或 `h3` 标签（通常是新闻标题），然后向上遍历获取父级容器。\n3. **调试与验证**：在提取数据前，打印 `page.title()` 和 `page.content()` 的前1000字符，确认页面未被重定向或拦截，并检查实际的类名结构。\n4. **处理无限滚动**：由于检测到 infinite_scroll 特征，尝试模拟页面滚动（`page.mouse.wheel(0, 1000)`）以触发更多内容的加载。",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success_data": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      },
+      "execution_success": true,
+      "data_extracted": 0
+    },
+    {
+      "timestamp": "2026-02-23T00:10:33.327158",
+      "url": "https://www.datawrapper.de/",
+      "domain": "www.datawrapper.de",
+      "website_type": "unknown",
+      "anti_bot_level": null,
+      "failure_type": "selector_error",
+      "root_cause": "代码使用了过于具体且脆弱的 CSS 选择器（如包含哈希值的 `svelte-1h0ppip` 和假设的语义类名 `footer__link-item`），这些选择器与 Datawrapper 当前动态生成的 DOM 结构不匹配。此外，代码逻辑存在目标偏差：它试图提取页面中的 UI 图标（如按钮或链接中的小 SVG），而非用户需要的“数据可视化图表”。Datawrapper 主页通常通过 `<img>` 标签或 iframe 展示图表预览，而非直接嵌入内联 SVG 代码，导致针对“链接内 SVG”的选择器全部失效。",
+      "suggested_fix": "1. 放弃特定类名，改用通用的标签选择器（如 `svg` 或 `img[src*='.svg']`）来捕获页面上所有的 SVG 相关元素，先验证元素是否存在。2. 修正目标定位逻辑：如果目标是获取完整的图表 SVG，必须将 URL 更改为包含实际图表的页面（如 Datawrapper Blog 的具体文章或社区示例页），因为主页通常只包含营销用的静态图片。3. 在代码中增加 DOM 结构检查步骤，打印 `page.content()` 或使用 `page.query_selector_all('svg')` 来确认页面实际包含的 SVG 元素数量和类型。",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success_data": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      },
+      "execution_success": true,
+      "data_extracted": 0
+    },
+    {
+      "timestamp": "2026-02-23T00:22:27.753784",
+      "url": "https://www.datawrapper.de/features",
+      "domain": "www.datawrapper.de",
+      "website_type": "ecommerce",
+      "anti_bot_level": "low",
+      "failure_type": "selector_error",
+      "root_cause": "目标页面（Datawrapper features页）是一个高度动态的页面，包含大量的图表示例。虽然代码执行成功且无报错，但提取数据为0，说明选择器 `page.locator('svg')` 未能匹配到预期的图表SVG元素。这通常是因为：1. 图表被封装在 `<iframe>` 标签中，Playwright 默认只在主文档上下文中查找，无法穿透 iframe；2. 页面采用了深度的懒加载机制，简单的滚动操作未能触发图表区域的渲染；3. 页面中的 SVG 可能是以背景图或 CSS 形式存在，而非独立的 `<svg>` 标签。",
+      "suggested_fix": "1. **处理 iframe**：遍历 `page.frames()`，在每个 iframe 上下文中执行 SVG 查找逻辑；2. **改进等待策略**：放弃单纯的 `networkidle`，改用 `page.wait_for_selector('iframe, svg', state='attached', timeout=30000)` 确保关键元素已加载；3. **增强滚动交互**：模拟更细致的分段滚动，并在每次滚动后增加等待时间，确保触发懒加载；4. **调试 DOM**：在提取前打印 `page.content()` 或截图，确认当前 DOM 结构中是否存在 SVG。",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success_data": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      },
+      "execution_success": true,
+      "data_extracted": 0
+    },
+    {
+      "timestamp": "2026-02-23T00:28:26.699574",
+      "url": "https://www.indeed.com/hire/job-description/software-engineer",
+      "domain": "www.indeed.com",
+      "website_type": "job_board",
+      "anti_bot_level": "high",
+      "failure_type": "selector_error",
+      "root_cause": "目标URL (https://www.indeed.com/hire/job-description/software-engineer) 是Indeed面向雇主的职位描述模板生成工具页面，而非求职者的职位搜索列表页。该页面仅包含表单和模板文本，不存在职位列表、薪资或公司Logo等目标数据，导致CSS选择器无法匹配任何元素。此外，Indeed作为高反爬虫网站，无头浏览器极易被识别并拦截，导致返回的是验证码页面或空白的HTML骨架，而非真实数据。",
+      "suggested_fix": "1. 修正目标URL为标准的Indeed职位搜索列表页（例如：https://www.indeed.com/jobs?q=software+engineer&l=New+York）。2. 引入 `playwright-stealth` 插件或库，以隐藏WebDriver特征，绕过反爬虫指纹识别。3. 在提取数据前，增加页面状态检测（如检查是否出现CAPTCHA或Access Denied提示），并针对正确的列表页结构（如 .job_seen_beacon 或 .slider_container）重写选择器。",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success_data": {
+        "partial_success": false,
+        "success_rate": 0.0,
+        "issues": [],
+        "strengths": [],
+        "recommendations": []
+      },
+      "execution_success": false,
+      "data_extracted": 0
+    },
+    {
+      "timestamp": "2026-02-23T00:34:11.250686",
+      "url": "https://arxiv.org/list/cs/recent",
+      "domain": "arxiv.org",
+      "website_type": "blog",
+      "anti_bot_level": "none",
+      "failure_type": "\"root_cause\": \"代码尝试通过点击链接（`a:has-text('Abstract')`）来展开摘要，但该选择器可能无法准确匹配页面元素（例如文本内容不完全匹配或链接结构变化），导致点击失败，摘要内容保持隐藏状态。随后的数据提取逻辑（未在截断的代码中显示，但根据结果推断）可能只提取了可见文本，从而得到空结果。ArXiv 的摘要通常存在于隐藏的 DOM 节点（如 `<blockquote class=\"abstract mathjax\">`）中，无需点击即可提取，依赖交互增加了失败风险。\",",
+      "root_cause": "\"suggested_fix\": \"1. 放弃通过点击展开摘要的策略，直接使用 CSS 选择器提取隐藏在 DOM 中的数据。ArXiv 的结构通常是 `dl#articles` 包含 `dt`（元数据）和 `dd`（内容）。\\n2. 使用 `page.locator('dl#articles > dt')` 遍历条目，并利用 `eval_on_selector` 或 `locator.inner_text()` 获取内容。\\n3. 针对性选择器：标题用 `.list-title`，作者用 `.list-authors`，摘要用 `.list-abstract mathjax`（即使隐藏也能提取），PDF 链接用 `a[href^='/pdf/']`。\\n4. 确保代码完整，正确处理 `dt` 和 `dd` 的对应关系。\",",
+      "suggested_fix": "\"avoid_repeat\": \"避免在静态内容（或可通过 DOM 直接获取的内容）上依赖复杂的交互（如点击）来触发数据加载。对于 'none' 级别的反爬虫网站，应优先使用直接、稳健的 DOM 解析策略，而不是模拟用户行为。同时，需确保生成的代码逻辑完整，不被截断。\"",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success_data": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      },
+      "execution_success": true,
+      "data_extracted": 0
+    },
+    {
+      "timestamp": "2026-02-23T00:40:32.076839",
+      "url": "https://www.indeed.com/hire/job-description/software-engineer",
+      "domain": "www.indeed.com",
+      "website_type": "job_board",
+      "anti_bot_level": "high",
+      "failure_type": "selector_error",
+      "root_cause": "目标URL (https://www.indeed.com/hire/job-description/software-engineer) 属于Indeed的招聘方产品页面，用于展示职位描述模板或示例，而非标准的求职者搜索结果列表。代码中使用了针对求职者搜索列表的选择器 `.job_seen_beacon` 来判断页面类型并提取数据。由于该页面上不存在 `.job_seen_beacon` 元素，代码将其误判为非列表页（或未进入提取逻辑），且未包含针对这种特定 'Hire' 页面结构的提取分支，导致最终提取数据量为0。",
+      "suggested_fix": "1. 重新分析页面结构：针对 `/hire/` 路径下的页面，应识别为职位详情/模板页，而非搜索列表页。2. 调整选择器策略：对于此类页面，应使用更通用的JD提取逻辑，例如提取 `h1` 标签作为职位标题，查找包含 'jobDescription'、'description' 类名的 div 或 `#jobDescriptionText` 作为职位描述内容。3. 增加多态处理逻辑：在代码中增加 `else` 分支，专门处理非搜索列表页的情况，确保无论是搜索页还是详情页都能提取到数据。",
+      "attempted_strategies": [],
+      "partial_success_data": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      },
+      "execution_success": true,
+      "data_extracted": 0
+    },
+    {
+      "timestamp": "2026-02-23T00:51:29.541468",
+      "url": "https://www.zillow.com/",
+      "domain": "www.zillow.com",
+      "website_type": "real_estate",
+      "anti_bot_level": "high",
+      "failure_type": "selector_error",
+      "root_cause": "Zillow is a JavaScript-heavy site with infinite scroll. The code only waited for the 'body' tag to load, which occurs before the actual property listings are dynamically rendered. Additionally, navigating to the root URL often results in a homepage or search prompt rather than a list of properties, requiring specific search parameters or interaction to generate the target content. The selectors likely failed because the listing container was empty or not yet rendered.",
+      "suggested_fix": "1. Navigate to a specific search results URL (e.g., 'https://www.zillow.com/homes/' with query parameters) instead of the root URL. 2. Wait for a specific selector that indicates the listing container is populated (e.g., '[data-test=\"property-card\"]' or 'ul.photo-cards'). 3. Implement scrolling logic to trigger the infinite scroll and load more items before extraction. 4. Handle cookie consent or location popups that might block interaction.",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success_data": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      },
+      "execution_success": true,
+      "data_extracted": 0
+    },
+    {
+      "timestamp": "2026-02-23T01:03:25.631689",
+      "url": "https://example.com/",
+      "domain": "example.com",
+      "website_type": "unknown",
+      "anti_bot_level": "none",
+      "failure_type": "selector_error",
+      "root_cause": "代码执行成功但提取数据量为0，且历史记录显示曾出现 'NoneType' object is not subscriptable 错误，这表明代码尝试访问的元素未被找到。对于 example.com 这种结构简单的静态页面，失败原因极有可能是使用了错误的CSS选择器或XPath，未能匹配到包含标题的 <title> 标签或特定的页面元素。",
+      "suggested_fix": "放弃使用自定义的复杂选择器，改用 Playwright 的原生 API `page.title()` 来直接获取页面标题。如果必须使用选择器，请使用通用的标签选择器 `title` 或 XPath `//title`，这能确保在 unknown 类型的网站上准确抓取到标题内容。",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success_data": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      },
+      "execution_success": true,
+      "data_extracted": 0
+    },
+    {
+      "timestamp": "2026-02-23T01:04:35.750972",
+      "url": "https://www.find-tender.service.gov.uk/",
+      "domain": "www.find-tender.service.gov.uk",
+      "website_type": "government",
+      "anti_bot_level": null,
+      "failure_type": "selector_error",
+      "root_cause": "代码执行成功但未提取到数据，且历史记录显示曾出现'NoneType' object is not subscriptable错误，这表明CSS选择器未能正确定位到页面上的招标信息列表或表格元素。尽管反爬虫等级为None，但页面DOM结构可能与预期不符，导致选择器匹配失败。",
+      "suggested_fix": "1. 重新检查目标页面的HTML结构，定位包含招标公告的容器（通常是`<table>`标签或带有特定类名的`<div>`列表）。2. 使用更稳健的选择器策略，例如先定位表格`table`，再遍历行`tr`，或者使用属性选择器。3. 在提取数据前，添加等待逻辑（如`wait_for_selector`）确保列表已加载。",
+      "attempted_strategies": [],
+      "partial_success_data": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      },
+      "execution_success": true,
+      "data_extracted": 0
+    }
+  ],
+  "domain_insights": {
+    "example.com": {
+      "domain": "example.com",
+      "website_type": "ecommerce",
+      "anti_bot_level": "medium",
+      "attempt_count": 2,
+      "success_count": 1,
+      "common_failures": {
+        "selector_error": 2
+      },
+      "working_strategies": [
+        "validated_selectors"
+      ],
+      "non_working_strategies": [
+        "basic_playwright"
+      ]
+    },
+    "techcrunch.com": {
+      "domain": "techcrunch.com",
+      "website_type": "ecommerce",
+      "anti_bot_level": "high",
+      "attempt_count": 8,
+      "success_count": 8,
+      "common_failures": {
+        "selector_error": 8
+      },
+      "working_strategies": [
+        "validated_selectors"
+      ],
+      "non_working_strategies": []
+    },
+    "www.amazon.com": {
+      "domain": "www.amazon.com",
+      "website_type": "ecommerce",
+      "anti_bot_level": "high",
+      "attempt_count": 4,
+      "success_count": 4,
+      "common_failures": {
+        "blocked": 1,
+        "anti_bot": 2,
+        "selector_error": 1
+      },
+      "working_strategies": [],
+      "non_working_strategies": []
+    },
+    "www.datawrapper.de": {
+      "domain": "www.datawrapper.de",
+      "website_type": "unknown",
+      "anti_bot_level": null,
+      "attempt_count": 3,
+      "success_count": 3,
+      "common_failures": {
+        "empty_result": 1,
+        "selector_error": 2
+      },
+      "working_strategies": [
+        "validated_selectors"
+      ],
+      "non_working_strategies": []
+    },
+    "www.indeed.com": {
+      "domain": "www.indeed.com",
+      "website_type": "job_board",
+      "anti_bot_level": "high",
+      "attempt_count": 2,
+      "success_count": 1,
+      "common_failures": {
+        "selector_error": 2
+      },
+      "working_strategies": [],
+      "non_working_strategies": [
+        "validated_selectors"
+      ]
+    },
+    "arxiv.org": {
+      "domain": "arxiv.org",
+      "website_type": "blog",
+      "anti_bot_level": "none",
+      "attempt_count": 1,
+      "success_count": 1,
+      "common_failures": {
+        "\"root_cause\": \"代码尝试通过点击链接（`a:has-text('Abstract')`）来展开摘要，但该选择器可能无法准确匹配页面元素（例如文本内容不完全匹配或链接结构变化），导致点击失败，摘要内容保持隐藏状态。随后的数据提取逻辑（未在截断的代码中显示，但根据结果推断）可能只提取了可见文本，从而得到空结果。ArXiv 的摘要通常存在于隐藏的 DOM 节点（如 `<blockquote class=\"abstract mathjax\">`）中，无需点击即可提取，依赖交互增加了失败风险。\",": 1
+      },
+      "working_strategies": [
+        "validated_selectors"
+      ],
+      "non_working_strategies": []
+    },
+    "www.zillow.com": {
+      "domain": "www.zillow.com",
+      "website_type": "real_estate",
+      "anti_bot_level": "high",
+      "attempt_count": 1,
+      "success_count": 1,
+      "common_failures": {
+        "selector_error": 1
+      },
+      "working_strategies": [
+        "validated_selectors"
+      ],
+      "non_working_strategies": []
+    },
+    "www.find-tender.service.gov.uk": {
+      "domain": "www.find-tender.service.gov.uk",
+      "website_type": "government",
+      "anti_bot_level": null,
+      "attempt_count": 1,
+      "success_count": 1,
+      "common_failures": {
+        "selector_error": 1
+      },
+      "working_strategies": [],
+      "non_working_strategies": []
+    }
+  },
+  "strategy_effectiveness": {
+    "ecommerce:medium:basic_playwright": {
+      "success_count": 0,
+      "total_count": 1,
+      "website_type": "ecommerce",
+      "anti_bot_level": "medium",
+      "strategy": "basic_playwright"
+    },
+    "unknown:high:validated_selectors": {
+      "success_count": 1,
+      "total_count": 1,
+      "website_type": "unknown",
+      "anti_bot_level": "high",
+      "strategy": "validated_selectors"
+    },
+    "ecommerce:high:validated_selectors": {
+      "success_count": 4,
+      "total_count": 4,
+      "website_type": "ecommerce",
+      "anti_bot_level": "high",
+      "strategy": "validated_selectors"
+    },
+    "unknown:None:validated_selectors": {
+      "success_count": 2,
+      "total_count": 2,
+      "website_type": "unknown",
+      "anti_bot_level": null,
+      "strategy": "validated_selectors"
+    },
+    "ecommerce:low:validated_selectors": {
+      "success_count": 1,
+      "total_count": 1,
+      "website_type": "ecommerce",
+      "anti_bot_level": "low",
+      "strategy": "validated_selectors"
+    },
+    "job_board:high:validated_selectors": {
+      "success_count": 0,
+      "total_count": 1,
+      "website_type": "job_board",
+      "anti_bot_level": "high",
+      "strategy": "validated_selectors"
+    },
+    "blog:none:validated_selectors": {
+      "success_count": 1,
+      "total_count": 1,
+      "website_type": "blog",
+      "anti_bot_level": "none",
+      "strategy": "validated_selectors"
+    },
+    "real_estate:high:validated_selectors": {
+      "success_count": 1,
+      "total_count": 1,
+      "website_type": "real_estate",
+      "anti_bot_level": "high",
+      "strategy": "validated_selectors"
+    },
+    "unknown:none:validated_selectors": {
+      "success_count": 1,
+      "total_count": 1,
+      "website_type": "unknown",
+      "anti_bot_level": "none",
+      "strategy": "validated_selectors"
+    }
+  }
+}

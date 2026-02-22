@@ -771,7 +771,7 @@ def validate_formats(items: list) -> dict:
     ]
 
     # 价格格式模式
-    price_pattern = r'^[¥$€£]?\s*\\d+(\\.\\d+)?\\s*[元美元EURGBPUSD]?$'
+    price_pattern = r'^[¥$€£]?\\s*\\d+(\\.\\d+)?\\s*[元美元EURGBPUSD]?$'
 
     for item in items:
         for key, value in item.items():
@@ -1031,6 +1031,331 @@ def get_report_generation_prompt(
 
 
 # ============================================================================
+# Interact 节点 Prompts - 多步交互逻辑
+# ============================================================================
+
+def get_interact_prompt(
+    url: str,
+    user_goal: str,
+    dom_analysis: str = "",
+    detected_features: list = None,
+) -> str:
+    """
+    生成交互阶段的 Prompt
+
+    用于处理需要多步交互的场景，例如：
+    1. 点击搜索按钮
+    2. 填写表单
+    3. 滚动加载
+    4. 等待动态内容
+
+    Args:
+        url: 目标站点 URL
+        user_goal: 用户需求
+        dom_analysis: DOM 分析结果
+        detected_features: 检测到的页面特征
+
+    Returns:
+        交互代码生成 Prompt
+    """
+    features = detected_features or []
+
+    features_text = ""
+    if features:
+        features_text = f"\n【检测到的页面特征】\n{', '.join(features)}"
+
+    return f"""你是一个浏览器交互专家。请生成处理多步交互的代码。
+
+【任务目标】
+站点 URL: {url}
+用户需求: {user_goal}
+{features_text}
+
+【DOM 分析结果】
+{dom_analysis[:1000] if dom_analysis else "暂无"}
+
+【常见交互类型】
+
+1. **点击按钮触发内容加载**
+   ```python
+   # 查找并点击搜索/提交按钮
+   search_btn = page.query_selector('button[type="submit"]')
+   if not search_btn:
+       search_btn = page.query_selector('button:has-text("Search")')
+   if search_btn:
+       search_btn.click()
+       page.wait_for_timeout(2000)  # 等待内容加载
+   ```
+
+2. **填写表单并提交**
+   ```python
+   # 填写搜索框
+   search_input = page.query_selector('input[name="search"], input[placeholder*="search" i]')
+   if search_input:
+       search_input.fill('keywords')
+       search_input.press('Enter')
+       page.wait_for_selector('.results, .items', timeout=5000)
+   ```
+
+3. **滚动加载更多内容**
+   ```python
+   # 多次滚动以加载所有内容
+   for _ in range(3):
+       page.evaluate('window.scrollBy(0, window.innerHeight)')
+       page.wait_for_timeout(1000)
+   ```
+
+4. **添加 URL 参数（适用于搜索页）**
+   ```python
+   # 如果页面是搜索页但没有结果，尝试添加参数
+   current_url = page.url
+   if '?' not in current_url:
+       page.goto(current_url + '?search=&page=1')
+       page.wait_for_timeout(2000)
+   ```
+
+5. **点击"展开更多"链接**
+   ```python
+   # 查找并点击展开链接
+   expand_links = page.query_selector_all('a:has-text("more"), a:has-text("展开"), button:has-text("show")')
+   for link in expand_links[:3]:
+       try:
+           link.click()
+           page.wait_for_timeout(500)
+       except:
+           pass
+   ```
+
+【代码要求】
+1. 使用 **playwright.sync_api**（同步模式）
+2. 定义 `interact(page)` 函数，执行交互后返回最终 URL
+3. 添加适当的等待和错误处理
+4. 输出 JSON 格式包含 final_url 和 interactions 记录
+
+【输出格式】
+```json
+{{
+  "final_url": "交互后的页面 URL",
+  "interactions": ["点击了搜索按钮", "等待了2秒"],
+  "success": true
+}}
+```
+
+【代码模板】
+```python
+from playwright.sync_api import sync_playwright
+import json
+
+def interact(page) -> str:
+    '''执行多步交互，返回最终 URL'''
+
+    interactions = []
+
+    # 示例：检查是否需要点击搜索按钮
+    try:
+        # 查找可能的搜索按钮
+        search_selectors = [
+            'button[type="submit"]',
+            'button:has-text("Search")',
+            'input[type="submit"]',
+            'button:has-text("搜索")',
+        ]
+
+        search_btn = None
+        for selector in search_selectors:
+            search_btn = page.query_selector(selector)
+            if search_btn:
+                interactions.append(f"找到搜索按钮: {{selector}}")
+                break
+
+        if search_btn:
+            search_btn.click()
+            interactions.append("点击了搜索按钮")
+            page.wait_for_timeout(2000)  # 等待结果加载
+    except Exception as e:
+        interactions.append(f"点击搜索按钮失败: {{str(e)}}")
+
+    # 示例：检查是否需要添加 URL 参数
+    current_url = page.url
+    if '?' not in current_url and 'search' in current_url.lower():
+        page.goto(current_url + '?keywords=')
+        interactions.append("添加了 URL 参数")
+        page.wait_for_timeout(2000)
+
+    return page.url, interactions
+
+def main():
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+
+        page.goto("{url}", wait_until='domcontentloaded', timeout=30000)
+
+        # 等待页面初始加载
+        try:
+            page.wait_for_selector('body', timeout=5000)
+        except:
+            pass
+
+        # 执行交互
+        final_url, interactions = interact(page)
+
+        result = {{
+            "final_url": final_url,
+            "interactions": interactions,
+            "success": final_url != page.url  # URL 变化说明可能发生了交互
+        }}
+
+        print(json.dumps(result, ensure_ascii=False))
+
+        browser.close()
+
+if __name__ == "__main__":
+    main()
+```
+
+请只输出完整可执行的 Python 代码，不要有其他说明。
+"""
+
+
+def get_enhanced_sense_prompt(
+    url: str,
+    user_goal: str,
+    html: str,
+    user_goal_requires_interaction: bool = False,
+) -> str:
+    """
+    生成增强的 Sense 阶段 Prompt
+
+    新增功能：
+    1. 选择器验证
+    2. 检测是否需要交互
+    3. 分析 DOM 结构
+
+    Args:
+        url: 目标站点 URL
+        user_goal: 用户需求
+        html: HTML 内容
+        user_goal_requires_interaction: 用户目标是否需要交互
+
+    Returns:
+        增强的 Sense Prompt
+    """
+    return f"""你是一个网页结构分析专家。请生成 Python 代码分析以下网页的 DOM 结构。
+
+【任务目标】
+站点 URL: {url}
+用户需求: {user_goal}
+
+【HTML 内容（前 10000 字符）】
+{html[:10000]}
+
+【代码要求】
+1. 使用 BeautifulSoup 解析 HTML
+2. 生成一个完整的、可直接运行的 Python 脚本
+3. **测试多个选择器**并返回有效的
+4. **检测是否需要交互**（如点击搜索按钮）
+5. 输出 JSON 格式的分析结果
+
+【输出格式】
+```json
+{{
+  "article_selector": "文章/条目容器的 CSS 选择器",
+  "title_selector": "标题的选择器",
+  "link_selector": "链接的选择器",
+  "valid_selectors": ["选择器1", "选择器2"],  // 实际测试有效的选择器
+  "selector_test_results": [
+    {{"selector": "a.link", "count": 10, "valid": true}},
+    {{"selector": "div.item", "count": 0, "valid": false}}
+  ],
+  "pagination": {{"type": "next_page|infinite_scroll|load_more|none", "selector": "..."}},
+  "requires_interaction": true/false,  // 是否需要交互（如点击搜索按钮）
+  "interaction_hints": ["可能需要点击搜索按钮", "可能需要填写表单"],
+  "sample_entries": [
+    {{"title": "...", "link": "...", "extra": "..."}}
+  ],
+  "recommendations": ["建议1", "建议2"]
+}}
+```
+
+【选择器测试要求】
+在代码中测试以下常见选择器模式：
+- 直接选择器: `a.card-link`, `article h2 a`
+- 父子选择器: `div.card-list a`, `ul.items li a`
+- 属性选择器: `[href*="/p/"]`, `[class*="title"]`
+- 组合选择器: `article.post a[href]`
+
+【交互检测要求】
+检查页面是否包含：
+- 搜索表单/搜索按钮
+- "加载更多"按钮
+- 分页链接
+- 需要点击才能展开的内容
+
+【代码模板】
+```python
+from bs4 import BeautifulSoup
+import json
+import sys
+
+html = '''{html[:5000]}'''
+
+soup = BeautifulSoup(html, 'lxml')
+
+# 测试选择器
+test_selectors = [
+    # 根据实际页面调整
+    'a[href]',
+    'article a',
+    '[class*="title"]',
+    '[href*="/p/"]',
+]
+
+selector_results = []
+for selector in test_selectors:
+    elements = soup.select(selector)
+    selector_results.append({{
+        "selector": selector,
+        "count": len(elements),
+        "valid": len(elements) > 0
+    }})
+
+# 找出有效的选择器
+valid_selectors = [r["selector"] for r in selector_results if r["valid"]]
+
+# 检测是否需要交互
+requires_interaction = False
+interaction_hints = []
+
+if soup.find('input', type='search') or soup.find('button', string=lambda s: s and 'search' in s.lower()):
+    requires_interaction = True
+    interaction_hints.append("检测到搜索框或搜索按钮")
+
+if soup.find('a', string=lambda s: s and 'more' in s.lower()):
+    requires_interaction = True
+    interaction_hints.append("检测到'加载更多'链接")
+
+analysis = {{
+    "article_selector": "请根据 HTML 分析",
+    "title_selector": "请根据 HTML 分析",
+    "link_selector": "请根据 HTML 分析",
+    "valid_selectors": valid_selectors,
+    "selector_test_results": selector_results,
+    "pagination": {{"type": "none", "selector": ""}},
+    "requires_interaction": requires_interaction,
+    "interaction_hints": interaction_hints,
+    "sample_entries": [],
+    "recommendations": []
+}}
+
+print(json.dumps(analysis, ensure_ascii=False, indent=2))
+```
+
+请只输出 Python 代码，不要有其他说明。
+"""
+
+
+# ============================================================================
 # 兼容性：保留旧名称（用于向后兼容）
 # ============================================================================
 
@@ -1052,8 +1377,12 @@ __all__ = [
     "extract_python_code",
     # Sense 节点
     "get_sense_dom_analysis_prompt",
+    "get_enhanced_sense_prompt",  # 新增：增强的 Sense Prompt（带选择器验证）
     # Plan 节点
     "get_code_generation_prompt",
+    "get_code_generation_prompt_with_memory",  # 新增：带记忆的代码生成
+    # Interact 节点（新增）
+    "get_interact_prompt",
     # SOOAL 节点
     "get_code_diagnose_prompt",
     "get_code_repair_prompt",
@@ -1062,6 +1391,8 @@ __all__ = [
     "get_enhanced_quality_evaluation_prompt",
     "get_deep_validation_prompt",
     "extract_validation_rules",
+    # Reflexion 节点（新增）
+    "get_reflection_prompt",
     # Report 节点
     "get_report_generation_prompt",
     # 常量（向后兼容）
@@ -1107,3 +1438,664 @@ output = {{
 print(json.dumps(output, ensure_ascii=False))
 ```
 """
+
+
+# ============================================================================
+# Reflexion 节点 Prompts - 反思和记忆增强
+# ============================================================================
+
+def get_reflection_prompt(
+    url: str,
+    user_goal: str,
+    execution_result: dict,
+    sample_data: list,
+    generated_code: str,
+    previous_reflections: list = None,
+) -> str:
+    """
+    生成 Reflexion 阶段的反思 Prompt
+
+    基于 Reflexion 论文 (arXiv:2303.11366) 的 Act-Reflect-Remember 循环，
+    让 LLM 深度分析失败原因并生成结构化反思。
+
+    Args:
+        url: 目标站点 URL
+        user_goal: 用户需求
+        execution_result: 执行结果
+        sample_data: 提取的数据样本
+        generated_code: 生成的代码
+        previous_reflections: 历史反思记录
+
+    Returns:
+        反思 Prompt
+    """
+    import json
+
+    # 分析执行结果
+    success = execution_result.get("success", False)
+    error = execution_result.get("error", "")
+    stderr = execution_result.get("stderr", "")
+    data_count = len(sample_data)
+
+    # 构建历史反思文本
+    previous_reflections_text = ""
+    if previous_reflections:
+        previous_reflections_text = "\n## 历史反思（最近3次）\n"
+        for i, refl in enumerate(previous_reflections[-3:], 1):
+            previous_reflections_text += f"{i}. {refl}\n"
+    else:
+        previous_reflections_text = "\n## 历史反思\n（无）\n"
+
+    # 样本数据预览
+    sample_preview = json.dumps(sample_data[:3], ensure_ascii=False) if sample_data else "[]"
+
+    return f"""你是一个Web爬虫专家，正在分析一次失败的爬虫尝试。
+
+## 任务信息
+- URL: {url}
+- 目标: {user_goal}
+
+## 执行结果
+- 执行成功: {success}
+- 提取数据量: {data_count}条
+- 错误信息: {error[:500] if error else "无"}
+- 标准错误输出: {stderr[:500] if stderr else "无"}
+
+## 生成的代码（前2000字符）
+```python
+{generated_code[:2000]}
+```
+
+## 提取的数据样本
+```json
+{sample_preview}
+```
+
+{previous_reflections_text}
+
+## 请进行深度反思
+
+分析这次失败的原因，并按以下格式输出：
+
+### 1. 失败类型
+从以下类型中选择一个：
+- **selector_error**: CSS选择器不匹配元素
+- **js_rendering**: JavaScript内容未正确渲染
+- **timeout**: 页面加载或操作超时
+- **rate_limit**: 被速率限制或封禁
+- **empty_result**: 执行成功但无数据提取
+- **syntax_error**: 代码语法错误
+- **api_error**: Playwright API使用错误
+- **blocked**: 被反爬虫系统阻止
+- **other**: 其他原因
+
+### 2. 根本原因
+具体分析为什么失败，不要泛泛而谈。
+
+### 3. 下次应该尝试的方法
+给出具体的、可操作的修复建议。
+
+### 4. 避免重复
+说明下次应该避免什么，确保不重复相同的错误。
+
+请以JSON格式输出：
+```json
+{{
+    "failure_type": "selector_error",
+    "root_cause": "具体的根本原因分析...",
+    "suggested_fix": "具体的修复建议...",
+    "avoid_repeat": "下次应该避免..."
+}}
+```
+
+**重要**: 如果这是第2次或更多次尝试，请确保你的分析与历史反思不同，找到新的角度！
+"""
+
+
+def get_code_generation_prompt_with_memory(
+    url: str,
+    user_goal: str,
+    dom_analysis: str,
+    failure_history: list = None,
+    reflection_memory: list = None,
+    successful_patterns: list = None,
+    iteration: int = 0,
+) -> str:
+    """
+    生成带历史记忆的代码生成 Prompt
+
+    在原有代码生成 Prompt 基础上，加入：
+    1. 失败历史 - 避免重复错误
+    2. 反思总结 - 利用经验改进
+    3. 成功模式 - 参考有效方法
+    4. 迭代次数 - 明确当前进度
+
+    Args:
+        url: 目标站点 URL
+        user_goal: 用户需求
+        dom_analysis: DOM 分析结果
+        failure_history: 失败历史记录
+        reflection_memory: 反思记忆
+        successful_patterns: 成功模式
+        iteration: 当前迭代次数
+
+    Returns:
+        代码生成 Prompt
+    """
+    import json
+
+    # 检测是否需要代码片段提取
+    needs_code_extraction = _detect_code_snippet_need(user_goal)
+
+    code_extraction_guide = ""
+    if needs_code_extraction:
+        code_extraction_guide = """
+
+【代码片段提取（SVG/HTML）】
+如果用户需求包含"SVG代码"、"HTML代码片段"、"富文本"、"图标"等关键词：
+- 使用 `page.inner_html()` 或 `element.inner_html()` 提取 HTML/SVG 代码
+- 使用 `page.evaluate("el => el.outerHTML")` 获取包含元素自身的完整代码
+- 等待 JS 动态内容加载完成: `page.wait_for_selector('svg', timeout=15000)`
+
+提取示例：
+```python
+# 提取 SVG 代码
+svgs = page.locator("svg").all()
+for svg in svgs[:5]:  # 限量采样
+    svg_code = svg.evaluate("el => el.outerHTML")
+    results.append({{"svg_code": svg_code, "type": "svg"}})
+
+# 提取 HTML 片段
+html_blocks = page.locator(".rich-text, .description, [data-html]").all()
+for block in html_blocks[:5]:
+    html_snippet = block.inner_html()
+    results.append({{"html_snippet": html_snippet, "type": "html"}})
+```
+"""
+
+    # 构建历史经验部分
+    memory_section = ""
+
+    if failure_history:
+        memory_section += "\n## ⚠️ 失败历史（请避免重复）\n"
+        for i, fail in enumerate(failure_history[-3:], 1):
+            memory_section += f"""
+### 尝试 #{i}
+- 失败类型: {fail.get('failure_type', 'unknown')}
+- 原因: {fail.get('root_cause', 'unknown')[:200]}
+- 数据量: {fail.get('data_count', 0)}条
+- 建议: {fail.get('suggested_fix', '无')[:200]}
+"""
+
+    if reflection_memory:
+        memory_section += "\n## 📝 反思总结\n"
+        for i, refl in enumerate(reflection_memory[-3:], 1):
+            memory_section += f"{i}. {refl[:300]}\n"
+
+    if successful_patterns:
+        memory_section += f"\n## ✅ 成功模式（可以参考）\n"
+        for pattern in successful_patterns:
+            memory_section += f"- {pattern}\n"
+
+    if iteration > 0:
+        memory_section += f"\n---\n\n**⚠️ 这是第 {iteration + 1} 次尝试。请确保不重复之前的错误！**\n"
+
+    return f"""你是一个爬虫代码生成专家。请生成完整的爬虫代码。
+
+【任务目标】
+站点 URL: {url}
+用户需求: {user_goal}
+
+{memory_section}
+
+【DOM 分析结果】
+{dom_analysis}
+{code_extraction_guide}
+
+【代码要求】
+1. 使用 **playwright.sync_api**（同步模式，不是 async！）
+2. 正确的 API 调用：
+   - `browser = p.chromium.launch(headless=True)`
+   - `page = browser.new_page()`  ← 正确！
+   - 不要使用 `browser.new_context()` ← 错误！
+3. 提取的数据以 JSON 格式输出到 stdout
+4. **确保不重复之前的错误**：如果失败历史提到选择器问题，请使用不同的选择器策略
+
+【常见错误避免】
+| 错误写法 | 正确写法 |
+|---------|---------|
+| `browser.new_context()` | `browser.new_page()` |
+| `await page.goto()` | `page.goto()` (同步模式) |
+| `async def scrape()` | `def scrape()` (同步函数) |
+| 忘记 `import json` | 必须在顶部导入 |
+| 硬编码单一选择器 | 准备备选选择器 |
+
+【输出格式】
+```json
+{{
+  "results": [{{"field1": "value1", ...}}],
+  "metadata": {{"total_pages": 1, "sample_size": N}}
+}}
+```
+
+【代码模板】
+```python
+from playwright.sync_api import sync_playwright
+import json
+
+def scrape(url: str) -> dict:
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()  # 正确的 API
+
+        page.goto(url, wait_until='domcontentloaded', timeout=30000)
+
+        # 等待内容加载 - 使用多种策略确保成功
+        try:
+            page.wait_for_selector('body', timeout=10000)
+        except:
+            pass
+
+        results = []
+
+        # TODO: 根据 DOM 分析结果实现数据提取
+        # 参考: {dom_analysis[:500]}
+
+        # 如果第一次尝试没获取到数据，尝试备选方法
+        if not results:
+            # TODO: 实现备选提取策略
+            pass
+
+        browser.close()
+
+        return {{
+            "results": results,
+            "metadata": {{"total_pages": 1, "sample_size": len(results)}}
+        }}
+
+if __name__ == "__main__":
+    import sys
+    url = sys.argv[1] if len(sys.argv) > 1 else "{url}"
+    result = scrape(url)
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+```
+
+请只输出完整可执行的 Python 代码，不要有其他说明。
+"""
+
+
+# ============================================================================
+# Phase 1: Validation Node Prompts
+# ============================================================================
+
+def get_validation_prompt(
+    url: str,
+    user_goal: str,
+    failed_selectors: list,
+    html: str,
+) -> str:
+    """
+    生成选择器验证 Prompt
+
+    当初始选择器验证失败时，生成替代选择器建议。
+    """
+    failed_text = "\n".join(f"- {s}" for s in failed_selectors) if failed_selectors else "无"
+
+    return f"""你是一个网页结构分析专家。请生成 Python 代码寻找替代的 CSS 选择器。
+
+【任务目标】
+站点 URL: {url}
+用户需求: {user_goal}
+
+【验证失败的选择器】
+{failed_text}
+
+【HTML 内容（前 10000 字符）】
+{html[:10000]}
+
+【代码要求】
+生成一个完整的 Python 脚本，用于：
+1. 分析 HTML 结构
+2. 生成备选选择器
+3. 测试这些选择器
+4. 返回有效的选择器列表
+
+【输出格式】
+```json
+{{
+  "alternative_selectors": ["选择器1", "选择器2", "选择器3"],
+  "test_results": [
+    {{"selector": "...", "count": 10, "valid": true}},
+    {{"selector": "...", "count": 0, "valid": false}}
+  ],
+  "recommendations": ["建议1", "建议2"]
+}}
+```
+
+请只输出 Python 代码，不要有其他说明。
+"""
+
+
+def get_verify_plan_prompt(
+    url: str,
+    user_goal: str,
+    code: str,
+    validation_report: dict,
+) -> str:
+    """
+    生成代码计划验证 Prompt
+
+    在实际执行前验证代码的正确性。
+    """
+    import json
+    validation_text = json.dumps(validation_report, ensure_ascii=False) if validation_report else "{}"
+
+    return f"""请验证以下爬虫代码的正确性。
+
+【任务目标】
+站点 URL: {url}
+用户需求: {user_goal}
+
+【验证报告】
+{validation_text}
+
+【生成的代码】
+```python
+{code[:5000]}
+```
+
+【请检查】
+1. 语法错误
+2. 缺失的导入
+3. API 使用正确性
+4. 错误处理
+5. 资源释放（browser.close()）
+
+请输出 JSON 格式的验证结果。
+"""
+
+
+# ============================================================================
+# Phase 2: Stealth-First Default Prompts
+# ============================================================================
+
+def get_stealth_code_generation_prompt(
+    url: str,
+    user_goal: str,
+    dom_analysis: str,
+    stealth_level: str = "medium",
+) -> str:
+    """
+    生成带隐身配置的代码生成 Prompt
+
+    在代码生成时自动包含隐身浏览器配置。
+    """
+    # 检测是否需要代码片段提取
+    needs_code_extraction = _detect_code_snippet_need(user_goal)
+
+    code_extraction_guide = ""
+    if needs_code_extraction:
+        code_extraction_guide = """
+
+【代码片段提取（SVG/HTML）】
+如果用户需求包含"SVG代码"、"HTML代码片段"、"富文本"、"图标"等关键词：
+- 使用 `page.inner_html()` 或 `element.inner_html()` 提取 HTML/SVG 代码
+- 使用 `page.evaluate("el => el.outerHTML")` 获取包含元素自身的完整代码
+- 等待 JS 动态内容加载完成: `page.wait_for_selector('svg', timeout=15000)`
+"""
+
+    # 根据隐身等级获取配置
+    stealth_configs = {
+        "none": {
+            "launch_args": "[]",
+            "delay": "0",
+            "stealth_script": "# 无隐身脚本",
+        },
+        "low": {
+            "launch_args": '["--disable-blink-features=AutomationControlled"]',
+            "delay": "random.uniform(1, 2)",
+            "stealth_script": """
+        # 基础隐身脚本
+        page.add_init_script('''
+            Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+        ''')""",
+        },
+        "medium": {
+            "launch_args": '["--disable-blink-features=AutomationControlled", "--no-sandbox"]',
+            "delay": "random.uniform(2, 4)",
+            "stealth_script": """
+        # 隐身脚本
+        page.add_init_script('''
+            Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+            window.chrome = {runtime: {}, loadTimes: function() {}};
+            Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5]};
+        ''')""",
+        },
+        "high": {
+            "launch_args": '["--disable-blink-features=AutomationControlled", "--no-sandbox", "--disable-web-security"]',
+            "delay": "random.uniform(3, 6)",
+            "stealth_script": """
+        # 高级隐身脚本
+        page.add_init_script('''
+            Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+            window.chrome = {runtime: {}, loadTimes: function() {}, csi: function() {}};
+            Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5]};
+            Object.defineProperty(navigator, 'languages', {get: () => ['en-US', 'en']};
+            const originalQuery = window.navigator.permissions.query;
+            window.navigator.permissions.query = (parameters) => (
+                parameters.name === 'notifications' ?
+                    Promise.resolve({{state: Notification.permission}}) :
+                    originalQuery(parameters)
+            );
+        ''')""",
+        },
+    }
+
+    config = stealth_configs.get(stealth_level, stealth_configs["medium"])
+
+    return f"""你是一个爬虫代码生成专家。请生成完整的爬虫代码。
+
+【任务目标】
+站点 URL: {url}
+用户需求: {user_goal}
+
+【⚠️ 隐身配置】
+隐身等级: {stealth_level}
+此网站检测到反爬虫措施，必须使用隐身浏览器配置！
+
+【DOM 分析结果】
+{dom_analysis}
+{code_extraction_guide}
+
+【代码要求】
+1. 使用 **playwright.sync_api**（同步模式）
+2. **必须使用以下隐身配置**：
+   - launch_args: [{config["launch_args"]}]
+   - 随机延迟: {config["delay"]} 秒
+{config["stealth_script"]}
+3. 正确的 API 调用：`page = browser.new_page()`
+4. 提取的数据以 JSON 格式输出到 stdout
+
+【常见错误避免】
+| 错误写法 | 正确写法 |
+|---------|---------|
+| `browser.new_context()` | `browser.new_page()` |
+| `await page.goto()` | `page.goto()` (同步模式) |
+| 忘记 `browser.close()` | 必须关闭浏览器释放资源 |
+
+【输出格式】
+```json
+{{
+  "results": [{{"field1": "value1", ...}}],
+  "metadata": {{"total_pages": 1, "sample_size": N}}
+}}
+```
+
+请只输出完整可执行的 Python 代码，不要有其他说明。
+"""
+
+
+# ============================================================================
+# Phase 4: Deep Reflection Prompts
+# ============================================================================
+
+def get_deep_reflection_prompt(
+    url: str,
+    user_goal: str,
+    execution_result: dict,
+    sample_data: list,
+    generated_code: str,
+    previous_reflections: list = None,
+    website_type: str = "unknown",
+    anti_bot_level: str = "none",
+    website_features: list = None,
+    partial_success: dict = None,
+) -> str:
+    """
+    生成深度反思 Prompt
+
+    Phase 4 增强：包含网站类型、反爬虫等级、特征、部分成功数据
+    """
+    import json
+
+    # 分析执行结果
+    success = execution_result.get("success", False)
+    error = execution_result.get("error", "")
+    stderr = execution_result.get("stderr", "")
+    data_count = len(sample_data)
+
+    # 构建历史反思文本
+    previous_reflections_text = ""
+    if previous_reflections:
+        previous_reflections_text = "\n## 历史反思（最近3次）\n"
+        for i, refl in enumerate(previous_reflections[-3:], 1):
+            previous_reflections_text += f"{i}. {refl}\n"
+    else:
+        previous_reflections_text = "\n## 历史反思\n（无）\n"
+
+    # 样本数据预览
+    sample_preview = json.dumps(sample_data[:3], ensure_ascii=False) if sample_data else "[]"
+
+    # 网站特征文本
+    features_text = ", ".join(website_features) if website_features else "无"
+
+    # 部分成功数据文本
+    partial_text = ""
+    if partial_success:
+        partial_text = f"""
+## 部分成功分析
+- 是否部分成功: {partial_success.get('partial_success', False)}
+- 成功率: {partial_success.get('success_rate', 0):.1%}
+- 优势: {', '.join(partial_success.get('strengths', []))}
+- 问题: {', '.join(partial_success.get('issues', []))}
+"""
+
+    return f"""你是一个Web爬虫专家，正在进行深度反思分析。
+
+## 任务信息
+- URL: {url}
+- 目标: {user_goal}
+
+## 网站分析（Phase 4 增强）
+- 网站类型: {website_type}
+- 反爬虫等级: {anti_bot_level}
+- 检测到的特征: {features_text}
+{partial_text}
+
+## 执行结果
+- 执行成功: {success}
+- 提取数据量: {data_count}条
+- 错误信息: {error[:500] if error else "无"}
+- 标准错误输出: {stderr[:500] if stderr else "无"}
+
+## 生成的代码（前2000字符）
+```python
+{generated_code[:2000]}
+```
+
+## 提取的数据样本
+```json
+{sample_preview}
+```
+
+{previous_reflections_text}
+
+## 请进行深度反思
+
+基于网站类型（{website_type}）和反爬虫等级（{anti_bot_level}），分析这次失败的原因。
+
+### 1. 失败类型
+从以下类型中选择一个：
+- **selector_error**: CSS选择器不匹配元素
+- **js_rendering**: JavaScript内容未正确渲染
+- **timeout**: 页面加载或操作超时
+- **rate_limit**: 被速率限制或封禁
+- **empty_result**: 执行成功但无数据提取
+- **syntax_error**: 代码语法错误
+- **api_error**: Playwright API使用错误
+- **blocked**: 被反爬虫系统阻止
+- **anti_bot**: 反爬虫系统（CAPTCHA、Cloudflare等）
+- **other**: 其他原因
+
+### 2. 根本原因
+结合网站类型和反爬虫等级，分析具体的根本原因。
+
+### 3. 下次应该尝试的方法
+给出具体的、可操作的修复建议，考虑：
+- 对于 {website_type} 类型的网站
+- 对于 {anti_bot_level} 级别的反爬虫
+- 基于部分成功数据中的优势/问题
+
+### 4. 避免重复
+说明下次应该避免什么，确保不重复相同的错误。
+
+请以JSON格式输出：
+```json
+{{
+    "failure_type": "selector_error",
+    "root_cause": "具体的根本原因分析...",
+    "suggested_fix": "具体的修复建议...",
+    "avoid_repeat": "下次应该避免..."
+}}
+```
+
+**重要**: 如果这是第2次或更多次尝试，请确保你的分析与历史反思不同，找到新的角度！
+"""
+
+
+# ============================================================================
+# Update __all__ exports
+# ============================================================================
+
+__all__ = [
+    # 基础函数
+    "extract_python_code",
+    # Sense 节点
+    "get_sense_dom_analysis_prompt",
+    "get_enhanced_sense_prompt",
+    # Plan 节点
+    "get_code_generation_prompt",
+    "get_code_generation_prompt_with_memory",
+    # Interact 节点
+    "get_interact_prompt",
+    # SOOAL 节点
+    "get_code_diagnose_prompt",
+    "get_code_repair_prompt",
+    # Verify 节点
+    "get_quality_evaluation_prompt",
+    "get_enhanced_quality_evaluation_prompt",
+    "get_deep_validation_prompt",
+    "extract_validation_rules",
+    # Reflexion 节点
+    "get_reflection_prompt",
+    "get_deep_reflection_prompt",  # Phase 4
+    # Report 节点
+    "get_report_generation_prompt",
+    # Phase 1: Validation
+    "get_validation_prompt",
+    "get_verify_plan_prompt",
+    # Phase 2: Stealth
+    "get_stealth_code_generation_prompt",
+    # 常量（向后兼容）
+    "AVAILABLE_TOOLS",
+]

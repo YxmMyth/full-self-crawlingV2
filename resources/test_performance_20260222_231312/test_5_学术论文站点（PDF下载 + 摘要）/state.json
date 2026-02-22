@@ -1,0 +1,112 @@
+{
+  "stage": "done",
+  "quality_score": 0,
+  "sample_data": [],
+  "sool_iteration": 6,
+  "failure_history": [
+    {
+      "iteration": 1,
+      "failure_type": "unknown",
+      "root_cause": "'NoneType' object is not subscriptable",
+      "suggested_fix": "检查错误信息",
+      "data_count": 0
+    },
+    {
+      "iteration": 3,
+      "failure_type": "\"root_cause\": \"代码尝试通过点击链接（`a:has-text('Abstract')`）来展开摘要，但该选择器可能无法准确匹配页面元素（例如文本内容不完全匹配或链接结构变化），导致点击失败，摘要内容保持隐藏状态。随后的数据提取逻辑（未在截断的代码中显示，但根据结果推断）可能只提取了可见文本，从而得到空结果。ArXiv 的摘要通常存在于隐藏的 DOM 节点（如 `<blockquote class=\"abstract mathjax\">`）中，无需点击即可提取，依赖交互增加了失败风险。\",",
+      "root_cause": "\"suggested_fix\": \"1. 放弃通过点击展开摘要的策略，直接使用 CSS 选择器提取隐藏在 DOM 中的数据。ArXiv 的结构通常是 `dl#articles` 包含 `dt`（元数据）和 `dd`（内容）。\\n2. 使用 `page.locator('dl#articles > dt')` 遍历条目，并利用 `eval_on_selector` 或 `locator.inner_text()` 获取内容。\\n3. 针对性选择器：标题用 `.list-title`，作者用 `.list-authors`，摘要用 `.list-abstract mathjax`（即使隐藏也能提取），PDF 链接用 `a[href^='/pdf/']`。\\n4. 确保代码完整，正确处理 `dt` 和 `dd` 的对应关系。\",",
+      "suggested_fix": "\"avoid_repeat\": \"避免在静态内容（或可通过 DOM 直接获取的内容）上依赖复杂的交互（如点击）来触发数据加载。对于 'none' 级别的反爬虫网站，应优先使用直接、稳健的 DOM 解析策略，而不是模拟用户行为。同时，需确保生成的代码逻辑完整，不被截断。\"",
+      "avoid_repeat": "",
+      "data_count": 0,
+      "website_type": "blog",
+      "anti_bot_level": "none",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      }
+    }
+  ],
+  "reflection_memory": [
+    "执行失败: 'NoneType' object is not subscriptable，数据量: 0",
+    "```json\n{\n    \"failure_type\": \"selector_error\",\n    \"root_cause\": \"代码尝试通过点击链接（`a:has-text('Abstract')`）来展开摘要，但该选择器可能无法准确匹配页面元素（例如文本内容不完全匹配或链接结构变化），导致点击失败，摘要内容保持隐藏状态。随后的数据提取逻辑（未在截断的代码中显示，但根据结果推断）可能只提取了可见文本，从而得到空结果。ArXiv 的摘要通常存在于隐藏的 DOM 节点（如 `<blockquote class=\"abstract mathjax\">`）中，无需点击即可提取，依赖交互增加了失败风险。\",\n    \"suggested_fix\": \"1. 放弃通过点击展开摘要的策略，直接使用 CSS 选择器提取隐藏在 DOM 中的数据。ArXiv 的结构通常是 `dl#articles` 包含 `dt`（元数据）和 `dd`（内容）。\\n2. 使用 `page.locator('dl#articles > dt')` 遍历条目，并利用 `eval_on_selector` 或 `locator.inner_text()` 获取内容。\\n3. 针对性选择器：标题用 `.list-title`，作者用 `.list-authors`，摘要用 `.list-abstract mathjax`（即使隐藏也能提取），PDF 链接用 `a[href^='/pdf/']`。\\n4. 确保代码完整，正确处理 `dt` 和 `dd` 的对应关系。\",\n    \"avoid_repeat\": \"避免在静态内容（或可通过 DOM 直接获取的内容）上依赖复杂的交互（如点击）来触发数据加载。对于 'none' 级别的反爬虫网站，应优先使用直接、稳健的 DOM 解析策略，而不是模拟用户行为。同时，需确保生成的代码逻辑完整，不被截断。\"\n}\n```"
+  ],
+  "attempt_signatures": [
+    "3d9fbc35",
+    "13d130a4"
+  ],
+  "quality_issues": [
+    "Խϵ: 0ֱֶοȱʧ"
+  ],
+  "agent_result": {
+    "success": true,
+    "agent_id": "agent_2ab76503",
+    "site_url": "https://arxiv.org/list/cs/recent",
+    "user_goal": "学术论文站点（PDF下载 + 摘要）",
+    "report": {
+      "site_url": "https://arxiv.org/list/cs/recent",
+      "user_goal": "学术论文站点（PDF下载 + 摘要）",
+      "quality_score": 0,
+      "sample_data": [],
+      "generated_code": "from playwright.sync_api import sync_playwright\nimport json\nimport time\nimport random\nimport sys\nimport re\n\nUSER_AGENTS = [\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36\",\n    \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36\",\n    \"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36\"\n]\n\ndef scrape(url: str) -> dict:\n    results = []\n    browser = None\n    try:\n        with sync_playwright() as p:\n            browser = p.chromium.launch(\n                headless=True,\n                args=[\"--disable-blink-features=AutomationControlled\", \"--no-sandbox\"]\n            )\n            page = browser.new_page(\n                user_agent=random.choice(USER_AGENTS),\n                viewport={\"width\": 1920, \"height\": 1080}\n            )\n\n            page.goto(url, wait_until='domcontentloaded', timeout=30000)\n\n            # 等待关键元素 dl#articles 加载完成\n            try:\n                page.wait_for_selector('dl#articles', timeout=10000)\n            except Exception:\n                pass\n\n            # 人类行为延迟\n            time.sleep(random.uniform(1, 2))\n\n            # === 数据提取 ===\n            # 根据 DOM 分析，ArXiv 使用 dl#articles 作为容器\n            # 内部结构为交替的 dt (元数据/ID) 和 dd (内容/标题/摘要)\n            \n            # 获取所有 dt 和 dd 元素\n            dts = page.locator(\"dl#articles > dt\").all()\n            dds = page.locator(\"dl#articles > dd\").all()\n\n            # 确保 dt 和 dd 数量匹配，防止索引越界\n            min_len = min(len(dts), len(dds))\n\n            for i in range(min_len):\n                try:\n                    dt = dts[i]\n                    dd = dds[i]\n                    \n                    result = {}\n\n                    # --- 1. 提取 ID 和 PDF 链接 (从 dt 元素) ---\n                    paper_id = \"\"\n                    pdf_link = \"\"\n                    \n                    try:\n                        # 尝试直接查找 PDF 链接\n                        pdf_anchor = dt.locator(\"a[href*='/pdf/']\").first\n                        if pdf_anchor.count() > 0:\n                            href = pdf_anchor.get_attribute(\"href\")\n                            if href:\n                                pdf_link = href if href.startswith(\"http\") else \"https://arxiv.org\" + href\n                                # 从链接中提取 ID (例如 2301.00001)\n                                match = re.search(r'(\\d+\\.\\d+)', pdf_link)\n                                if match:\n                                    paper_id = match.group(1)\n                        \n                        # 如果没找到 PDF 链接，尝试从 Abstract 链接提取 ID 并构造 PDF 链接\n                        if not paper_id:\n                            abs_anchor = dt.locator(\"a[href*='/abs/']\").first\n                            if abs_anchor.count() > 0:\n                                href = abs_anchor.get_attribute(\"href\")\n                                match = re.search(r'(\\d+\\.\\d+)', href)\n                                if match:\n                                    paper_id = match.group(1)\n                                    pdf_link = f\"https://arxiv.org/pdf/{paper_id}.pdf\"\n                        \n                        # 备选方案：直接从 dt 文本中提取 ID (格式如 arXiv:2301.00001)\n                        if not paper_id:\n                            text_content = dt.text_content()\n                            match = re.search(r'arXiv:(\\d+\\.\\d+)', text_content)\n                            if match:\n                                paper_id = match.group(1)\n                                pdf_link = f\"https://arxiv.org/pdf/{paper_id}.pdf\"\n\n                    except Exception:\n                        pass\n\n                    result[\"id\"] = paper_id\n                    result[\"pdf_url\"] = pdf_link\n\n                    # --- 2. 提取标题 (从 dd 元素) ---\n                    # 使用 .list-title 选择器，这是 ArXiv 的标准类名\n                    try:\n                        title_div = dd.locator(\"div.list-title\").first\n                        if title_div.count() > 0:\n                            title_text = title_div.text_content()\n                            # 清理 \"Title:\" 前缀和多余空白\n                            title_text = title_text.replace(\"Title:\", \"\").strip()\n                            result[\"title\"] = title_text\n                        else:\n                            # 容错：如果标准类名失效，尝试查找包含 \"Title:\" 文本的 div\n                            fallback_title = dd.locator(\"div:has-text('Title:')\").first\n                            if fallback_title.count() > 0:\n                                result[\"title\"] = fallback_title.text_content().replace(\"Title:\", \"\").strip()\n                    except Exception:\n                        pass\n\n                    # --- 3. 提取摘要 (从 dd 元素) ---\n                    # 使用 blockquote.abstract 选择器\n                    # 注意：摘要可能在 DOM 中但不可见，使用 text_content() 可直接提取无需点击\n                    try:\n                        abstract_bq = dd.locator(\"blockquote.abstract\").first\n                        if abstract_bq.count() > 0:\n                            abs_text = abstract_bq.text_content()\n                            # 清理 \"Abstract:\" 前缀和多余空白\n                            abs_text = abs_text.replace(\"Abstract:\", \"\").strip()\n                            result[\"abstract\"] = abs_text\n                        else:\n                            # 容错：查找任何 blockquote\n                            fallback_bq = dd.locator(\"blockquote\").first\n                            if fallback_bq.count() > 0:\n                                result[\"abstract\"] = fallback_bq.text_content().replace(\"Abstract:\", \"\").strip()\n                    except Exception:\n                        pass\n\n                    # 数据验证：确保至少有标题或 ID\n                    if result.get(\"title\") or result.get(\"id\"):\n                        results.append(result)\n\n                except Exception as e:\n                    # 单个条目提取失败，跳过继续下一个\n                    continue\n\n    except Exception as e:\n        # 全局异常处理\n        error = str(e)\n    finally:\n        if browser:\n            browser.close()\n\n    # 数据清洗和验证\n    valid_results = [r for r in results if r.get(\"title\") or r.get(\"id\")]\n\n    return {\n        \"results\": valid_results,\n        \"metadata\": {\n            \"total_extracted\": len(results),\n            \"valid_count\": len(valid_results),\n            \"url\": url\n        }\n    }\n\nif __name__ == \"__main__\":\n    import sys\n    url = sys.argv[1] if len(sys.argv) > 1 else \"https://arxiv.org/list/cs/recent\"\n    result = scrape(url)\n    print(json.dumps(result, ensure_ascii=False, indent=2))"
+    },
+    "markdown_report": "```markdown\n# 网站数据侦察报告\n\n## 站点信息\n- URL: https://arxiv.org/list/cs/recent\n- 用户需求: 学术论文站点（PDF下载 + 摘要）\n- 侦察时间: 2026-05-22\n\n## 侦察总结\n- 估算数据总量: ~200-500 条 (该页面为“最近更新”列表，通常包含每日新增或更新的计算机科学论文)\n- 样本质量分数: 0/1.0 (基于本次侦察未返回样本数据)\n- 数据结构化程度: 高 (HTML 结构规范，包含明确的元数据标识)\n\n## 站点特征分析\n- 页面类型: 学术文献列表页\n- 分页方式: 日期归档导航 (通过底部 \"newer\" / \"older\" 链接切换日期)\n- 反爬等级: 低 (学术公开站点，无强制登录或复杂验证码)\n\n## 真实样本预览\n[无样本数据 - 本次侦察未捕获到有效样本]\n\n*注：基于 arXiv 标准页面结构，预期数据字段如下：*\n```json\n{\n  \"arxiv_id\": \"2405.xxxxx\",\n  \"title\": \"Paper Title Here\",\n  \"authors\": [\"Author A\", \"Author B\"],\n  \"subjects\": \"cs.AI, cs.LG\",\n  \"abstract\": \"The full abstract text...\",\n  \"pdf_link\": \"http://arxiv.org/pdf/2405.xxxxx.pdf\"\n}\n```\n\n## 可爬性评估\n- 反爬等级: 低\n- 技术难度: 简单\n- 推荐策略: \n  1. **列表解析**: 使用 HTML 解析器（如 BeautifulSoup）定位 `<div id=\"dlpage\">` 下的 `<dl>` 列表。\n  2. **字段提取**: \n     - 标题和 ID 位于 `<dt>` 标签内的 `<a>` 标签。\n     - 摘要位于 `<dd>` 标签内的 `<blockquote>` 或 `<div class=\"mathjax\">` 中。\n     - PDF 下载链接可根据 ID 拼接生成：`https://arxiv.org/pdf/{id}.pdf`。\n  3. **翻页逻辑**: 提取页面底部的 \"older\" 链接进行递归抓取，以获取历史数据。\n  4. **速率控制**: 建议设置 `Delay=2s` 以上，遵守 robots.txt 规范，避免对学术服务器造成压力。\n```",
+    "generated_code": "from playwright.sync_api import sync_playwright\nimport json\nimport time\nimport random\nimport sys\nimport re\n\nUSER_AGENTS = [\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36\",\n    \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36\",\n    \"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36\"\n]\n\ndef scrape(url: str) -> dict:\n    results = []\n    browser = None\n    try:\n        with sync_playwright() as p:\n            browser = p.chromium.launch(\n                headless=True,\n                args=[\"--disable-blink-features=AutomationControlled\", \"--no-sandbox\"]\n            )\n            page = browser.new_page(\n                user_agent=random.choice(USER_AGENTS),\n                viewport={\"width\": 1920, \"height\": 1080}\n            )\n\n            page.goto(url, wait_until='domcontentloaded', timeout=30000)\n\n            # 等待关键元素 dl#articles 加载完成\n            try:\n                page.wait_for_selector('dl#articles', timeout=10000)\n            except Exception:\n                pass\n\n            # 人类行为延迟\n            time.sleep(random.uniform(1, 2))\n\n            # === 数据提取 ===\n            # 根据 DOM 分析，ArXiv 使用 dl#articles 作为容器\n            # 内部结构为交替的 dt (元数据/ID) 和 dd (内容/标题/摘要)\n            \n            # 获取所有 dt 和 dd 元素\n            dts = page.locator(\"dl#articles > dt\").all()\n            dds = page.locator(\"dl#articles > dd\").all()\n\n            # 确保 dt 和 dd 数量匹配，防止索引越界\n            min_len = min(len(dts), len(dds))\n\n            for i in range(min_len):\n                try:\n                    dt = dts[i]\n                    dd = dds[i]\n                    \n                    result = {}\n\n                    # --- 1. 提取 ID 和 PDF 链接 (从 dt 元素) ---\n                    paper_id = \"\"\n                    pdf_link = \"\"\n                    \n                    try:\n                        # 尝试直接查找 PDF 链接\n                        pdf_anchor = dt.locator(\"a[href*='/pdf/']\").first\n                        if pdf_anchor.count() > 0:\n                            href = pdf_anchor.get_attribute(\"href\")\n                            if href:\n                                pdf_link = href if href.startswith(\"http\") else \"https://arxiv.org\" + href\n                                # 从链接中提取 ID (例如 2301.00001)\n                                match = re.search(r'(\\d+\\.\\d+)', pdf_link)\n                                if match:\n                                    paper_id = match.group(1)\n                        \n                        # 如果没找到 PDF 链接，尝试从 Abstract 链接提取 ID 并构造 PDF 链接\n                        if not paper_id:\n                            abs_anchor = dt.locator(\"a[href*='/abs/']\").first\n                            if abs_anchor.count() > 0:\n                                href = abs_anchor.get_attribute(\"href\")\n                                match = re.search(r'(\\d+\\.\\d+)', href)\n                                if match:\n                                    paper_id = match.group(1)\n                                    pdf_link = f\"https://arxiv.org/pdf/{paper_id}.pdf\"\n                        \n                        # 备选方案：直接从 dt 文本中提取 ID (格式如 arXiv:2301.00001)\n                        if not paper_id:\n                            text_content = dt.text_content()\n                            match = re.search(r'arXiv:(\\d+\\.\\d+)', text_content)\n                            if match:\n                                paper_id = match.group(1)\n                                pdf_link = f\"https://arxiv.org/pdf/{paper_id}.pdf\"\n\n                    except Exception:\n                        pass\n\n                    result[\"id\"] = paper_id\n                    result[\"pdf_url\"] = pdf_link\n\n                    # --- 2. 提取标题 (从 dd 元素) ---\n                    # 使用 .list-title 选择器，这是 ArXiv 的标准类名\n                    try:\n                        title_div = dd.locator(\"div.list-title\").first\n                        if title_div.count() > 0:\n                            title_text = title_div.text_content()\n                            # 清理 \"Title:\" 前缀和多余空白\n                            title_text = title_text.replace(\"Title:\", \"\").strip()\n                            result[\"title\"] = title_text\n                        else:\n                            # 容错：如果标准类名失效，尝试查找包含 \"Title:\" 文本的 div\n                            fallback_title = dd.locator(\"div:has-text('Title:')\").first\n                            if fallback_title.count() > 0:\n                                result[\"title\"] = fallback_title.text_content().replace(\"Title:\", \"\").strip()\n                    except Exception:\n                        pass\n\n                    # --- 3. 提取摘要 (从 dd 元素) ---\n                    # 使用 blockquote.abstract 选择器\n                    # 注意：摘要可能在 DOM 中但不可见，使用 text_content() 可直接提取无需点击\n                    try:\n                        abstract_bq = dd.locator(\"blockquote.abstract\").first\n                        if abstract_bq.count() > 0:\n                            abs_text = abstract_bq.text_content()\n                            # 清理 \"Abstract:\" 前缀和多余空白\n                            abs_text = abs_text.replace(\"Abstract:\", \"\").strip()\n                            result[\"abstract\"] = abs_text\n                        else:\n                            # 容错：查找任何 blockquote\n                            fallback_bq = dd.locator(\"blockquote\").first\n                            if fallback_bq.count() > 0:\n                                result[\"abstract\"] = fallback_bq.text_content().replace(\"Abstract:\", \"\").strip()\n                    except Exception:\n                        pass\n\n                    # 数据验证：确保至少有标题或 ID\n                    if result.get(\"title\") or result.get(\"id\"):\n                        results.append(result)\n\n                except Exception as e:\n                    # 单个条目提取失败，跳过继续下一个\n                    continue\n\n    except Exception as e:\n        # 全局异常处理\n        error = str(e)\n    finally:\n        if browser:\n            browser.close()\n\n    # 数据清洗和验证\n    valid_results = [r for r in results if r.get(\"title\") or r.get(\"id\")]\n\n    return {\n        \"results\": valid_results,\n        \"metadata\": {\n            \"total_extracted\": len(results),\n            \"valid_count\": len(valid_results),\n            \"url\": url\n        }\n    }\n\nif __name__ == \"__main__\":\n    import sys\n    url = sys.argv[1] if len(sys.argv) > 1 else \"https://arxiv.org/list/cs/recent\"\n    result = scrape(url)\n    print(json.dumps(result, ensure_ascii=False, indent=2))",
+    "stage": "done",
+    "final_state": {
+      "stage": "done",
+      "quality_score": 0,
+      "sample_data": [],
+      "sool_iteration": 6,
+      "failure_history": [
+        {
+          "iteration": 1,
+          "failure_type": "unknown",
+          "root_cause": "'NoneType' object is not subscriptable",
+          "suggested_fix": "检查错误信息",
+          "data_count": 0
+        },
+        {
+          "iteration": 3,
+          "failure_type": "\"root_cause\": \"代码尝试通过点击链接（`a:has-text('Abstract')`）来展开摘要，但该选择器可能无法准确匹配页面元素（例如文本内容不完全匹配或链接结构变化），导致点击失败，摘要内容保持隐藏状态。随后的数据提取逻辑（未在截断的代码中显示，但根据结果推断）可能只提取了可见文本，从而得到空结果。ArXiv 的摘要通常存在于隐藏的 DOM 节点（如 `<blockquote class=\"abstract mathjax\">`）中，无需点击即可提取，依赖交互增加了失败风险。\",",
+          "root_cause": "\"suggested_fix\": \"1. 放弃通过点击展开摘要的策略，直接使用 CSS 选择器提取隐藏在 DOM 中的数据。ArXiv 的结构通常是 `dl#articles` 包含 `dt`（元数据）和 `dd`（内容）。\\n2. 使用 `page.locator('dl#articles > dt')` 遍历条目，并利用 `eval_on_selector` 或 `locator.inner_text()` 获取内容。\\n3. 针对性选择器：标题用 `.list-title`，作者用 `.list-authors`，摘要用 `.list-abstract mathjax`（即使隐藏也能提取），PDF 链接用 `a[href^='/pdf/']`。\\n4. 确保代码完整，正确处理 `dt` 和 `dd` 的对应关系。\",",
+          "suggested_fix": "\"avoid_repeat\": \"避免在静态内容（或可通过 DOM 直接获取的内容）上依赖复杂的交互（如点击）来触发数据加载。对于 'none' 级别的反爬虫网站，应优先使用直接、稳健的 DOM 解析策略，而不是模拟用户行为。同时，需确保生成的代码逻辑完整，不被截断。\"",
+          "avoid_repeat": "",
+          "data_count": 0,
+          "website_type": "blog",
+          "anti_bot_level": "none",
+          "attempted_strategies": [
+            "validated_selectors"
+          ],
+          "partial_success": {
+            "partial_success": true,
+            "success_rate": 1.0,
+            "issues": [],
+            "strengths": [
+              "Code executed successfully"
+            ],
+            "recommendations": []
+          }
+        }
+      ],
+      "reflection_memory": [
+        "执行失败: 'NoneType' object is not subscriptable，数据量: 0",
+        "```json\n{\n    \"failure_type\": \"selector_error\",\n    \"root_cause\": \"代码尝试通过点击链接（`a:has-text('Abstract')`）来展开摘要，但该选择器可能无法准确匹配页面元素（例如文本内容不完全匹配或链接结构变化），导致点击失败，摘要内容保持隐藏状态。随后的数据提取逻辑（未在截断的代码中显示，但根据结果推断）可能只提取了可见文本，从而得到空结果。ArXiv 的摘要通常存在于隐藏的 DOM 节点（如 `<blockquote class=\"abstract mathjax\">`）中，无需点击即可提取，依赖交互增加了失败风险。\",\n    \"suggested_fix\": \"1. 放弃通过点击展开摘要的策略，直接使用 CSS 选择器提取隐藏在 DOM 中的数据。ArXiv 的结构通常是 `dl#articles` 包含 `dt`（元数据）和 `dd`（内容）。\\n2. 使用 `page.locator('dl#articles > dt')` 遍历条目，并利用 `eval_on_selector` 或 `locator.inner_text()` 获取内容。\\n3. 针对性选择器：标题用 `.list-title`，作者用 `.list-authors`，摘要用 `.list-abstract mathjax`（即使隐藏也能提取），PDF 链接用 `a[href^='/pdf/']`。\\n4. 确保代码完整，正确处理 `dt` 和 `dd` 的对应关系。\",\n    \"avoid_repeat\": \"避免在静态内容（或可通过 DOM 直接获取的内容）上依赖复杂的交互（如点击）来触发数据加载。对于 'none' 级别的反爬虫网站，应优先使用直接、稳健的 DOM 解析策略，而不是模拟用户行为。同时，需确保生成的代码逻辑完整，不被截断。\"\n}\n```"
+      ],
+      "attempt_signatures": [
+        "3d9fbc35",
+        "13d130a4"
+      ],
+      "quality_issues": [
+        "Խϵ: 0ֱֶοȱʧ"
+      ]
+    }
+  }
+}

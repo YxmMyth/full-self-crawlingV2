@@ -49,6 +49,21 @@ agent_results/
 docker_samples/
 *.log
 
+# 新增目录结构（测试结果和归档）
+results/
+archives/
+data/db/*.db
+data/db/*.sqlite
+
+# Pytest缓存
+.pytest_cache/
+**/.pytest_cache/
+
+# 临时文件
+*.tmp
+*.temp
+*.bak
+
 # Docker
 .dockerignore
 

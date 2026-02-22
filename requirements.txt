@@ -2,6 +2,7 @@
 
 # LLM
 httpx>=0.27.0
+openai>=1.0.0  # For Aliyun Bailian OpenAI-compatible API
 
 # LangGraph/LangChain
 langgraph>=0.2.0
@@ -11,6 +12,13 @@ langchain-core>=0.3.0
 playwright>=1.40.0
 beautifulsoup4>=4.12.0
 lxml>=5.0.0
+playwright-stealth>=1.0.5
 
 # Utilities
 python-dotenv>=1.0.0
+
+# Architecture Enhancement Dependencies (2026 Best Practices)
+toml>=0.10.2           # For SKILL.md parsing
+jsonschema>=4.20.0     # For skill metadata validation
+pillow>=10.0.0         # For image validation
+pyyaml>=6.0.0          # For config files

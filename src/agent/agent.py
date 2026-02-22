@@ -6,7 +6,18 @@ SiteAgent - 混合架构侦察智能体
 
 import asyncio
 import uuid
-from typing import Dict, Any, Optional, Callable
+import os
+from typing import Dict, Any, Optional, Callable, AsyncIterator
+from pathlib import Path
+
+# 加载 .env 文件
+try:
+    from dotenv import load_dotenv
+    # 尝试加载项目根目录的 .env 文件
+    env_path = Path(__file__).parent.parent.parent / '.env'
+    load_dotenv(dotenv_path=env_path)
+except ImportError:
+    pass  # 如果没有 python-dotenv，就跳过
 
 from .graph import create_recon_graph
 from .state import ReconState, create_initial_state
@@ -65,7 +76,7 @@ class SiteAgent:
         try:
             final_state = await self.graph.ainvoke(initial_state)
 
-            # 构建结果
+            # 构建结果（包含完整状态用于详细日志）
             result = {
                 "success": final_state["stage"] == "done",
                 "agent_id": self.agent_id,
@@ -75,6 +86,18 @@ class SiteAgent:
                 "markdown_report": final_state.get("markdown_report"),
                 "generated_code": final_state.get("generated_code"),
                 "stage": final_state["stage"],
+                # 新增：完整状态，包含 failure_history, reflection_memory 等
+                "final_state": {
+                    "stage": final_state.get("stage"),
+                    "quality_score": final_state.get("quality_score"),
+                    "sample_data": final_state.get("sample_data"),
+                    "sool_iteration": final_state.get("sool_iteration", 0),
+                    "failure_history": final_state.get("failure_history", []),
+                    "reflection_memory": final_state.get("reflection_memory", []),
+                    "attempt_signatures": final_state.get("attempt_signatures", []),
+                    "quality_issues": final_state.get("quality_issues", []),
+                    "performance_data": final_state.get("performance_data", {}),  # 新增：性能数据
+                }
             }
 
             # 成功回调
@@ -106,7 +129,7 @@ class SiteAgent:
             "nodes": ["sense", "plan", "act", "verify", "report", "soal"],
         }
 
-    async def stream(self, task_params: Dict[str, Any]):
+    async def stream(self, task_params: Dict[str, Any]) -> AsyncIterator[Dict[str, Any]]:
         """
         流式输出侦察进度
 
@@ -118,17 +141,38 @@ class SiteAgent:
         )
 
         async for event in self.graph.astream(initial_state):
+            # LangGraph 的 astream 返回的是 (node_name, state) 元组或字典
+            if isinstance(event, dict):
+                node_name = event.get("node", "")
+                state = event.get("state", event)
+            else:
+                # 尝试解包元组
+                try:
+                    node_name, state = event
+                except:
+                    continue
+
             # 输出每个节点完成后的状态
-            if event.name == "sense":
-                yield {"stage": "sense", "data": event}
-            elif event.name == "plan":
-                yield {"stage": "plan", "code_generated": True}
-            elif event.name == "act":
-                yield {"stage": "act", "executed": True}
-            elif event.name == "verify":
-                yield {"stage": "verify", "quality": event.get("quality_score")}
-            elif event.name == "report":
-                yield {"stage": "report", "done": True}
+            if node_name == "sense":
+                yield {"stage": "sense", "state": state}
+            elif node_name == "plan":
+                yield {"stage": "plan", "state": state}
+            elif node_name == "act":
+                yield {"stage": "act", "state": state}
+            elif node_name == "verify":
+                yield {"stage": "verify", "state": state}
+            elif node_name == "report":
+                yield {"stage": "report", "state": state}
+
+    async def close(self):
+        """
+        关闭 Agent 并释放资源
+
+        关闭浏览器连接等资源。
+        """
+        # 如果有需要清理的资源，在这里处理
+        # 当前实现中，浏览器由沙箱管理，会自动关闭
+        pass
 
 
 # ===== 兼容性导出 =====

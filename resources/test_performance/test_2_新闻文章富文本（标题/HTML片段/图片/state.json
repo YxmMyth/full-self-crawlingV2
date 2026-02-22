@@ -1,0 +1,112 @@
+{
+  "stage": "done",
+  "quality_score": 0.0,
+  "sample_data": [],
+  "sool_iteration": 6,
+  "failure_history": [
+    {
+      "iteration": 1,
+      "failure_type": "unknown",
+      "root_cause": "'NoneType' object is not subscriptable",
+      "suggested_fix": "检查错误信息",
+      "data_count": 0
+    },
+    {
+      "iteration": 4,
+      "failure_type": "selector_error",
+      "root_cause": "代码中使用的CSS选择器（如 `.post-block`, `article`）与当前 TechCrunch 网站的实际DOM结构不匹配。TechCrunch 作为高反爬虫等级且重度依赖 JavaScript 的网站，其 DOM 结构经常更新或通过 A/B 测试呈现不同布局。此外，`wait_until='domcontentloaded'` 可能触发过早，导致动态加载的新闻内容尚未渲染，或者无头浏览器触发了反爬机制，导致返回的页面不包含预期的新闻容器。",
+      "suggested_fix": "1. **增强等待策略**：使用 `page.wait_for_load_state('networkidle')` 或增加显式等待时间（如 3-5秒），确保动态内容加载完毕。\n2. **通用选择器策略**：放弃依赖特定的容器类（如 `.post-block`），改用更通用的标签定位，例如查找所有的 `h2` 或 `h3` 标签（通常是新闻标题），然后向上遍历获取父级容器。\n3. **调试与验证**：在提取数据前，打印 `page.title()` 和 `page.content()` 的前1000字符，确认页面未被重定向或拦截，并检查实际的类名结构。\n4. **处理无限滚动**：由于检测到 infinite_scroll 特征，尝试模拟页面滚动（`page.mouse.wheel(0, 1000)`）以触发更多内容的加载。",
+      "avoid_repeat": "避免在未验证当前页面实际DOM结构的情况下，盲目使用硬编码的、可能过时的CSS选择器列表。避免在重度JavaScript渲染的网站上仅依赖 `domcontentloaded` 事件作为提取数据的唯一触发条件。",
+      "data_count": 0,
+      "website_type": "ecommerce",
+      "anti_bot_level": "high",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      }
+    }
+  ],
+  "reflection_memory": [
+    "执行失败: 'NoneType' object is not subscriptable，数据量: 0",
+    "```json\n{\n    \"failure_type\": \"selector_error\",\n    \"root_cause\": \"代码中使用的CSS选择器（如 `.post-block`, `article`）与当前 TechCrunch 网站的实际DOM结构不匹配。TechCrunch 作为高反爬虫等级且重度依赖 JavaScript 的网站，其 DOM 结构经常更新或通过 A/B 测试呈现不同布局。此外，`wait_until='domcontentloaded'` 可能触发过早，导致动态加载的新闻内容尚未渲染，或者无头浏览器触发了反爬机制，导致返回的页面不包含预期的新闻容器。\",\n    \"suggested_fix\": \"1. **增强等待策略**：使用 `page.wait_for_load_state('networkidle')` 或增加显式等待时间（如 3-5秒），确保动态内容加载完毕。\\n2. **通用选择器策略**：放弃依赖特定的容器类（如 `.post-block`），改用更通用的标签定位，例如查找所有的 `h2` 或 `h3` 标签（通常是新闻标题），然后向上遍历获取父级容器。\\n3. **调试与验证**：在提取数据前，打印 `page.title()` 和 `page.content()` 的前1000字符，确认页面未被重定向或拦截，并检查实际的类名结构。\\n4. **处理无限滚动**：由于检测到 infinite_scroll 特征，尝试模拟页面滚动（`page.mouse.wheel(0, 1000)`）以触发更多内容的加载。\",\n    \"avoid_repeat\": \"避免在未验证当前页面实际DOM结构的情况下，盲目使用硬编码的、可能过时的CSS选择器列表。避免在重度JavaScript渲染的网站上仅依赖 `domcontentloaded` 事件作为提取数据的唯一触发条件。\"\n}\n```"
+  ],
+  "attempt_signatures": [
+    "32fc7034",
+    "e05a1d38"
+  ],
+  "quality_issues": [
+    "评估异常: Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+  ],
+  "agent_result": {
+    "success": true,
+    "agent_id": "agent_5e06fa28",
+    "site_url": "https://techcrunch.com/",
+    "user_goal": "新闻文章富文本（标题/HTML片段/图片/视频）",
+    "report": {
+      "site_url": "https://techcrunch.com/",
+      "user_goal": "新闻文章富文本（标题/HTML片段/图片/视频）",
+      "quality_score": 0.0,
+      "sample_data": [],
+      "generated_code": "from playwright.sync_api import sync_playwright\nimport json\nimport sys\nimport time\nimport random\n\n# 常见的 User-Agent 列表，用于模拟真实用户\nUSER_AGENTS = [\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36\",\n    \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36\",\n    \"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36\",\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0\"\n]\n\ndef scrape(url: str) -> dict:\n    results = []\n    browser = None\n    error_msg = None\n    \n    # 定义多组备选选择器，优先使用语义化标签，然后是特定类名\n    container_selectors = [\n        \"article\",           # 标准 HTML5 语义标签\n        \".post-block\",       # TechCrunch 旧版常用类\n        \"[class*='PostCard']\", # 现代组件化类名\n        \".wp-block-post\",     # WordPress 新版编辑器块\n        \"[data-id]\"           # 通用数据属性\n    ]\n\n    try:\n        with sync_playwright() as p:\n            # 启动浏览器，添加反爬虫参数\n            browser = p.chromium.launch(\n                headless=True,\n                args=[\n                    \"--disable-blink-features=AutomationControlled\",\n                    \"--no-sandbox\",\n                    \"--disable-web-security\",\n                    \"--disable-features=IsolateOrigins,site-per-process\"\n                ]\n            )\n            \n            context = browser.new_context(\n                user_agent=random.choice(USER_AGENTS),\n                viewport={\"width\": 1920, \"height\": 1080},\n                locale=\"en-US\"\n            )\n            page = context.new_page()\n\n            # 访问页面，使用 networkidle 确保大部分 JS 加载完成\n            # 设置较长超时以应对慢速网络或反爬延迟\n            page.goto(url, wait_until='networkidle', timeout=60000)\n\n            # 尝试等待主要内容容器出现，增加容错时间\n            try:\n                # 等待 body 标签加载\n                page.wait_for_selector('body', timeout=15000)\n                \n                # 模拟人类行为，随机滚动\n                page.evaluate(\"window.scrollBy(0, 500)\")\n                time.sleep(random.uniform(1.5, 3.0))\n            except Exception as e:\n                # 即使等待失败也继续尝试提取\n                pass\n\n            # === 数据提取 ===\n            items = []\n            \n            # 策略：遍历选择器列表，找到能匹配元素的选择器\n            for selector in container_selectors:\n                try:\n                    # 检查选择器是否匹配到元素\n                    count = page.locator(selector).count()\n                    if count > 0:\n                        items = page.locator(selector).all()\n                        print(f\"Found {count} items using selector: {selector}\", file=sys.stderr)\n                        break\n                except:\n                    continue\n\n            # 如果常规选择器都失败，尝试根据已验证的 iframe 选择器或回退方案\n            if not items:\n                # 尝试查找任何包含链接和图片的块级元素作为最后手段\n                items = page.locator(\"div:has(a):has(img)\").all()\n\n            for item in items:\n                try:\n                    result = {\n                        \"title\": None,\n                        \"html_snippet\": None,\n                        \"image\": None,\n                        \"video\": None,\n                        \"link\": None\n                    }\n\n                    # 1. 提取标题 (尝试多种可能的标签)\n                    title_selectors = [\"h2 a\", \"h3 a\", \"h2\", \"h3\", \".post-block__title__link\", \"[class*='title'] a\"]\n                    title_text = None\n                    for t_sel in title_selectors:\n                        try:\n                            title_el = item.locator(t_sel).first\n                            if title_el.count() > 0:\n                                title_text = title_el.text_content()\n                                if title_text:\n                                    # 如果是链接元素，尝试获取 href\n                                    if \"a\" in t_sel:\n                                        result[\"link\"] = title_el.get_attribute(\"href\")\n                                    break\n                        except:\n                            continue\n                    \n                    result[\"title\"] = title_text.strip() if title_text else None\n\n                    # 2. 提取 HTML 片段 (提取容器内的部分 HTML)\n                    try:\n                        # 获取内部 HTML，限制长度以防过大\n                        raw_html = item.inner_html()\n                        if raw_html:\n                            result[\"html_snippet\"] = raw_html[:5000] # 限制长度\n                    except:\n                        pass\n\n                    # 3. 提取图片\n                    try:\n                        img_el = item.locator(\"img\").first\n                        if img_el.count() > 0:\n                            # 优先获取 src，如果没有则尝试 data-src (懒加载)\n                            img_src = img_el.get_attribute(\"src\") or img_el.get_attribute(\"data-src\")\n                            result[\"image\"] = img_src\n                    except:\n                        pass\n\n                    # 4. 提取视频 (检查 video 标签或 iframe)\n                    try:\n                        video_el = item.locator(\"video\").first\n                        if video_el.count() > 0:\n                            result[\"video\"] = video_el.get_attribute(\"src\")\n                        else:\n                            # 检查 iframe (根据已验证选择器提示)\n                            iframe_el = item.locator(\"iframe\").first\n                            if iframe_el.count() > 0:\n                                result[\"video\"] = iframe_el.get_attribute(\"src\")\n                    except:\n                        pass\n\n                    # 数据验证：必须有标题或图片或视频才视为有效\n                    if result[\"title\"] or result[\"image\"] or result[\"video\"]:\n                        results.append(result)\n\n                except Exception as e:\n                    # 单个条目提取失败不影响其他条目\n                    continue\n\n    except Exception as e:\n        error_msg = str(e)\n    finally:\n        if browser:\n            browser.close()\n\n    # 数据清洗和验证\n    valid_results = [r for r in results if r.get(\"title\") or r.get(\"image\")]\n\n    return {\n        \"results\": valid_results,\n        \"metadata\": {\n            \"total_extracted\": len(results),\n            \"valid_count\": len(valid_results),\n            \"url\": url,\n            \"error\": error_msg\n        }\n    }\n\nif __name__ == \"__main__\":\n    import sys\n    url = sys.argv[1] if len(sys.argv) > 1 else \"https://techcrunch.com/\"\n    result = scrape(url)\n    print(json.dumps(result, ensure_ascii=False, indent=2))"
+    },
+    "markdown_report": "# 网站数据侦察报告\n\n## 站点信息\n- URL: https://techcrunch.com/\n- 用户需求: 新闻文章富文本（标题/HTML片段/图片/视频）\n\n## 侦察总结\n- SOOAL 迭代: 6\n- 质量分数: 0.0\n- 样本数量: 0\n",
+    "generated_code": "from playwright.sync_api import sync_playwright\nimport json\nimport sys\nimport time\nimport random\n\n# 常见的 User-Agent 列表，用于模拟真实用户\nUSER_AGENTS = [\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36\",\n    \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36\",\n    \"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36\",\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0\"\n]\n\ndef scrape(url: str) -> dict:\n    results = []\n    browser = None\n    error_msg = None\n    \n    # 定义多组备选选择器，优先使用语义化标签，然后是特定类名\n    container_selectors = [\n        \"article\",           # 标准 HTML5 语义标签\n        \".post-block\",       # TechCrunch 旧版常用类\n        \"[class*='PostCard']\", # 现代组件化类名\n        \".wp-block-post\",     # WordPress 新版编辑器块\n        \"[data-id]\"           # 通用数据属性\n    ]\n\n    try:\n        with sync_playwright() as p:\n            # 启动浏览器，添加反爬虫参数\n            browser = p.chromium.launch(\n                headless=True,\n                args=[\n                    \"--disable-blink-features=AutomationControlled\",\n                    \"--no-sandbox\",\n                    \"--disable-web-security\",\n                    \"--disable-features=IsolateOrigins,site-per-process\"\n                ]\n            )\n            \n            context = browser.new_context(\n                user_agent=random.choice(USER_AGENTS),\n                viewport={\"width\": 1920, \"height\": 1080},\n                locale=\"en-US\"\n            )\n            page = context.new_page()\n\n            # 访问页面，使用 networkidle 确保大部分 JS 加载完成\n            # 设置较长超时以应对慢速网络或反爬延迟\n            page.goto(url, wait_until='networkidle', timeout=60000)\n\n            # 尝试等待主要内容容器出现，增加容错时间\n            try:\n                # 等待 body 标签加载\n                page.wait_for_selector('body', timeout=15000)\n                \n                # 模拟人类行为，随机滚动\n                page.evaluate(\"window.scrollBy(0, 500)\")\n                time.sleep(random.uniform(1.5, 3.0))\n            except Exception as e:\n                # 即使等待失败也继续尝试提取\n                pass\n\n            # === 数据提取 ===\n            items = []\n            \n            # 策略：遍历选择器列表，找到能匹配元素的选择器\n            for selector in container_selectors:\n                try:\n                    # 检查选择器是否匹配到元素\n                    count = page.locator(selector).count()\n                    if count > 0:\n                        items = page.locator(selector).all()\n                        print(f\"Found {count} items using selector: {selector}\", file=sys.stderr)\n                        break\n                except:\n                    continue\n\n            # 如果常规选择器都失败，尝试根据已验证的 iframe 选择器或回退方案\n            if not items:\n                # 尝试查找任何包含链接和图片的块级元素作为最后手段\n                items = page.locator(\"div:has(a):has(img)\").all()\n\n            for item in items:\n                try:\n                    result = {\n                        \"title\": None,\n                        \"html_snippet\": None,\n                        \"image\": None,\n                        \"video\": None,\n                        \"link\": None\n                    }\n\n                    # 1. 提取标题 (尝试多种可能的标签)\n                    title_selectors = [\"h2 a\", \"h3 a\", \"h2\", \"h3\", \".post-block__title__link\", \"[class*='title'] a\"]\n                    title_text = None\n                    for t_sel in title_selectors:\n                        try:\n                            title_el = item.locator(t_sel).first\n                            if title_el.count() > 0:\n                                title_text = title_el.text_content()\n                                if title_text:\n                                    # 如果是链接元素，尝试获取 href\n                                    if \"a\" in t_sel:\n                                        result[\"link\"] = title_el.get_attribute(\"href\")\n                                    break\n                        except:\n                            continue\n                    \n                    result[\"title\"] = title_text.strip() if title_text else None\n\n                    # 2. 提取 HTML 片段 (提取容器内的部分 HTML)\n                    try:\n                        # 获取内部 HTML，限制长度以防过大\n                        raw_html = item.inner_html()\n                        if raw_html:\n                            result[\"html_snippet\"] = raw_html[:5000] # 限制长度\n                    except:\n                        pass\n\n                    # 3. 提取图片\n                    try:\n                        img_el = item.locator(\"img\").first\n                        if img_el.count() > 0:\n                            # 优先获取 src，如果没有则尝试 data-src (懒加载)\n                            img_src = img_el.get_attribute(\"src\") or img_el.get_attribute(\"data-src\")\n                            result[\"image\"] = img_src\n                    except:\n                        pass\n\n                    # 4. 提取视频 (检查 video 标签或 iframe)\n                    try:\n                        video_el = item.locator(\"video\").first\n                        if video_el.count() > 0:\n                            result[\"video\"] = video_el.get_attribute(\"src\")\n                        else:\n                            # 检查 iframe (根据已验证选择器提示)\n                            iframe_el = item.locator(\"iframe\").first\n                            if iframe_el.count() > 0:\n                                result[\"video\"] = iframe_el.get_attribute(\"src\")\n                    except:\n                        pass\n\n                    # 数据验证：必须有标题或图片或视频才视为有效\n                    if result[\"title\"] or result[\"image\"] or result[\"video\"]:\n                        results.append(result)\n\n                except Exception as e:\n                    # 单个条目提取失败不影响其他条目\n                    continue\n\n    except Exception as e:\n        error_msg = str(e)\n    finally:\n        if browser:\n            browser.close()\n\n    # 数据清洗和验证\n    valid_results = [r for r in results if r.get(\"title\") or r.get(\"image\")]\n\n    return {\n        \"results\": valid_results,\n        \"metadata\": {\n            \"total_extracted\": len(results),\n            \"valid_count\": len(valid_results),\n            \"url\": url,\n            \"error\": error_msg\n        }\n    }\n\nif __name__ == \"__main__\":\n    import sys\n    url = sys.argv[1] if len(sys.argv) > 1 else \"https://techcrunch.com/\"\n    result = scrape(url)\n    print(json.dumps(result, ensure_ascii=False, indent=2))",
+    "stage": "done",
+    "final_state": {
+      "stage": "done",
+      "quality_score": 0.0,
+      "sample_data": [],
+      "sool_iteration": 6,
+      "failure_history": [
+        {
+          "iteration": 1,
+          "failure_type": "unknown",
+          "root_cause": "'NoneType' object is not subscriptable",
+          "suggested_fix": "检查错误信息",
+          "data_count": 0
+        },
+        {
+          "iteration": 4,
+          "failure_type": "selector_error",
+          "root_cause": "代码中使用的CSS选择器（如 `.post-block`, `article`）与当前 TechCrunch 网站的实际DOM结构不匹配。TechCrunch 作为高反爬虫等级且重度依赖 JavaScript 的网站，其 DOM 结构经常更新或通过 A/B 测试呈现不同布局。此外，`wait_until='domcontentloaded'` 可能触发过早，导致动态加载的新闻内容尚未渲染，或者无头浏览器触发了反爬机制，导致返回的页面不包含预期的新闻容器。",
+          "suggested_fix": "1. **增强等待策略**：使用 `page.wait_for_load_state('networkidle')` 或增加显式等待时间（如 3-5秒），确保动态内容加载完毕。\n2. **通用选择器策略**：放弃依赖特定的容器类（如 `.post-block`），改用更通用的标签定位，例如查找所有的 `h2` 或 `h3` 标签（通常是新闻标题），然后向上遍历获取父级容器。\n3. **调试与验证**：在提取数据前，打印 `page.title()` 和 `page.content()` 的前1000字符，确认页面未被重定向或拦截，并检查实际的类名结构。\n4. **处理无限滚动**：由于检测到 infinite_scroll 特征，尝试模拟页面滚动（`page.mouse.wheel(0, 1000)`）以触发更多内容的加载。",
+          "avoid_repeat": "避免在未验证当前页面实际DOM结构的情况下，盲目使用硬编码的、可能过时的CSS选择器列表。避免在重度JavaScript渲染的网站上仅依赖 `domcontentloaded` 事件作为提取数据的唯一触发条件。",
+          "data_count": 0,
+          "website_type": "ecommerce",
+          "anti_bot_level": "high",
+          "attempted_strategies": [
+            "validated_selectors"
+          ],
+          "partial_success": {
+            "partial_success": true,
+            "success_rate": 1.0,
+            "issues": [],
+            "strengths": [
+              "Code executed successfully"
+            ],
+            "recommendations": []
+          }
+        }
+      ],
+      "reflection_memory": [
+        "执行失败: 'NoneType' object is not subscriptable，数据量: 0",
+        "```json\n{\n    \"failure_type\": \"selector_error\",\n    \"root_cause\": \"代码中使用的CSS选择器（如 `.post-block`, `article`）与当前 TechCrunch 网站的实际DOM结构不匹配。TechCrunch 作为高反爬虫等级且重度依赖 JavaScript 的网站，其 DOM 结构经常更新或通过 A/B 测试呈现不同布局。此外，`wait_until='domcontentloaded'` 可能触发过早，导致动态加载的新闻内容尚未渲染，或者无头浏览器触发了反爬机制，导致返回的页面不包含预期的新闻容器。\",\n    \"suggested_fix\": \"1. **增强等待策略**：使用 `page.wait_for_load_state('networkidle')` 或增加显式等待时间（如 3-5秒），确保动态内容加载完毕。\\n2. **通用选择器策略**：放弃依赖特定的容器类（如 `.post-block`），改用更通用的标签定位，例如查找所有的 `h2` 或 `h3` 标签（通常是新闻标题），然后向上遍历获取父级容器。\\n3. **调试与验证**：在提取数据前，打印 `page.title()` 和 `page.content()` 的前1000字符，确认页面未被重定向或拦截，并检查实际的类名结构。\\n4. **处理无限滚动**：由于检测到 infinite_scroll 特征，尝试模拟页面滚动（`page.mouse.wheel(0, 1000)`）以触发更多内容的加载。\",\n    \"avoid_repeat\": \"避免在未验证当前页面实际DOM结构的情况下，盲目使用硬编码的、可能过时的CSS选择器列表。避免在重度JavaScript渲染的网站上仅依赖 `domcontentloaded` 事件作为提取数据的唯一触发条件。\"\n}\n```"
+      ],
+      "attempt_signatures": [
+        "32fc7034",
+        "e05a1d38"
+      ],
+      "quality_issues": [
+        "评估异常: Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+      ]
+    }
+  }
+}

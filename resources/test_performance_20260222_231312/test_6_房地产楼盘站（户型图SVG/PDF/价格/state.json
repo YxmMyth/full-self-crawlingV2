@@ -1,0 +1,112 @@
+{
+  "stage": "done",
+  "quality_score": 0,
+  "sample_data": [],
+  "sool_iteration": 6,
+  "failure_history": [
+    {
+      "iteration": 1,
+      "failure_type": "unknown",
+      "root_cause": "'NoneType' object is not subscriptable",
+      "suggested_fix": "检查错误信息",
+      "data_count": 0
+    },
+    {
+      "iteration": 3,
+      "failure_type": "selector_error",
+      "root_cause": "Zillow is a JavaScript-heavy site with infinite scroll. The code only waited for the 'body' tag to load, which occurs before the actual property listings are dynamically rendered. Additionally, navigating to the root URL often results in a homepage or search prompt rather than a list of properties, requiring specific search parameters or interaction to generate the target content. The selectors likely failed because the listing container was empty or not yet rendered.",
+      "suggested_fix": "1. Navigate to a specific search results URL (e.g., 'https://www.zillow.com/homes/' with query parameters) instead of the root URL. 2. Wait for a specific selector that indicates the listing container is populated (e.g., '[data-test=\"property-card\"]' or 'ul.photo-cards'). 3. Implement scrolling logic to trigger the infinite scroll and load more items before extraction. 4. Handle cookie consent or location popups that might block interaction.",
+      "avoid_repeat": "Do not assume data is available immediately after 'domcontentloaded' or 'body' presence. Do not omit scrolling logic for infinite scroll websites. Do not rely on generic selectors to determine if dynamic content has loaded.",
+      "data_count": 0,
+      "website_type": "real_estate",
+      "anti_bot_level": "high",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      }
+    }
+  ],
+  "reflection_memory": [
+    "执行失败: 'NoneType' object is not subscriptable，数据量: 0",
+    "```json\n{\n    \"failure_type\": \"selector_error\",\n    \"root_cause\": \"Zillow is a JavaScript-heavy site with infinite scroll. The code only waited for the 'body' tag to load, which occurs before the actual property listings are dynamically rendered. Additionally, navigating to the root URL often results in a homepage or search prompt rather than a list of properties, requiring specific search parameters or interaction to generate the target content. The selectors likely failed because the listing container was empty or not yet rendered.\",\n    \"suggested_fix\": \"1. Navigate to a specific search results URL (e.g., 'https://www.zillow.com/homes/' with query parameters) instead of the root URL. 2. Wait for a specific selector that indicates the listing container is populated (e.g., '[data-test=\\\"property-card\\\"]' or 'ul.photo-cards'). 3. Implement scrolling logic to trigger the infinite scroll and load more items before extraction. 4. Handle cookie consent or location popups that might block interaction.\",\n    \"avoid_repeat\": \"Do not assume data is available immediately after 'domcontentloaded' or 'body' presence. Do not omit scrolling logic for infinite scroll websites. Do not rely on generic selectors to determine if dynamic content has loaded.\"\n}\n```"
+  ],
+  "attempt_signatures": [
+    "2dde0e87",
+    "a57c91a5"
+  ],
+  "quality_issues": [
+    "Խϵ: 0ֱֶοȱʧ"
+  ],
+  "agent_result": {
+    "success": true,
+    "agent_id": "agent_e8d4565c",
+    "site_url": "https://www.zillow.com/",
+    "user_goal": "房地产楼盘站（户型图SVG/PDF/价格）",
+    "report": {
+      "site_url": "https://www.zillow.com/",
+      "user_goal": "房地产楼盘站（户型图SVG/PDF/价格）",
+      "quality_score": 0,
+      "sample_data": [],
+      "generated_code": "from playwright.sync_api import sync_playwright\nimport json\nimport time\nimport random\n\n# 模拟真实用户代理\nUSER_AGENTS = [\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36\",\n    \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36\",\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/114.0\"\n]\n\ndef scrape(url: str) -> dict:\n    results = []\n    browser = None\n    metadata = {\n        \"total_extracted\": 0,\n        \"valid_count\": 0,\n        \"url\": url,\n        \"captcha_detected\": False,\n        \"errors\": []\n    }\n\n    try:\n        with sync_playwright() as p:\n            # 启动浏览器，添加反爬虫参数\n            browser = p.chromium.launch(\n                headless=True,\n                args=[\n                    \"--disable-blink-features=AutomationControlled\",\n                    \"--no-sandbox\",\n                    \"--disable-web-security\",\n                    \"--disable-features=IsolateOrigins,site-per-process\"\n                ]\n            )\n            \n            context = browser.new_context(\n                user_agent=random.choice(USER_AGENTS),\n                viewport={\"width\": 1920, \"height\": 1080},\n                locale=\"en-US\"\n            )\n            page = context.new_page()\n\n            # 访问目标页面\n            try:\n                page.goto(url, wait_until='domcontentloaded', timeout=60000)\n            except Exception as e:\n                metadata[\"errors\"].append(f\"Navigation timeout or error: {str(e)}\")\n\n            # 检查验证码 (根据DOM分析结果)\n            try:\n                captcha_selector = \".px-captcha-container\"\n                if page.locator(captcha_selector).count() > 0:\n                    metadata[\"captcha_detected\"] = True\n                    metadata[\"errors\"].append(\"Captcha detected (PerimeterX/Human Security). Scraping may be limited.\")\n                    # 即使有验证码，也尝试等待片刻看是否能通过\n                    time.sleep(5)\n            except:\n                pass\n\n            # 模拟人类滚动以触发无限加载\n            try:\n                for _ in range(3):\n                    page.mouse.wheel(0, 1000)\n                    time.sleep(random.uniform(1.5, 2.5))\n            except Exception as e:\n                metadata[\"errors\"].append(f\"Scrolling error: {str(e)}\")\n\n            # 等待关键元素加载 (房产卡片)\n            try:\n                # 使用建议的选择器 [data-test='property-card']\n                page.wait_for_selector(\"div[data-test='property-card']\", timeout=15000, state=\"attached\")\n            except Exception:\n                # 如果超时，记录但不中断，尝试提取现有内容\n                metadata[\"errors\"].append(\"Timeout waiting for property cards. Content might be empty.\")\n\n            # === 数据提取 ===\n            \n            # 1. 提取房产列表\n            try:\n                # 使用建议的选择器\n                cards = page.locator(\"div[data-test='property-card']\").all()\n                \n                for card in cards:\n                    item_data = {}\n                    try:\n                        # 提取价格\n                        try:\n                            price_el = card.locator(\"[data-test='property-card-price']\").first\n                            item_data[\"price\"] = price_el.text_content().strip()\n                        except:\n                            item_data[\"price\"] = None\n\n                        # 提取地址\n                        try:\n                            addr_el = card.locator(\"[data-test='property-card-addr']\").first\n                            item_data[\"address\"] = addr_el.text_content().strip()\n                        except:\n                            item_data[\"address\"] = None\n\n                        # 提取链接\n                        try:\n                            link_el = card.locator(\"a\").first\n                            item_data[\"link\"] = link_el.get_attribute(\"href\")\n                            if item_data[\"link\"] and not item_data[\"link\"].startswith(\"http\"):\n                                item_data[\"link\"] = \"https://www.zillow.com\" + item_data[\"link\"]\n                        except:\n                            item_data[\"link\"] = None\n                        \n                        # 提取图片 (作为户型图/房源图的备选)\n                        try:\n                            img_el = card.locator(\"img\").first\n                            item_data[\"image_url\"] = img_el.get_attribute(\"src\")\n                        except:\n                            item_data[\"image_url\"] = None\n\n                        results.append(item_data)\n                    except Exception as e:\n                        continue\n\n            except Exception as e:\n                metadata[\"errors\"].append(f\"Error extracting property cards: {str(e)}\")\n\n            # 2. 提取页面中的 SVG (满足用户对户型图SVG的需求)\n            # 注意：Zillow列表页通常使用img标签，但我们也检查SVG以防万一\n            try:\n                svgs = page.locator(\"svg\").all()\n                for svg in svgs[:5]: # 限制提取数量防止过大\n                    try:\n                        svg_code = svg.evaluate(\"el => el.outerHTML\")\n                        results.append({\n                            \"svg_code\": svg_code,\n                            \"type\": \"svg\",\n                            \"source\": \"page_inline\"\n                        })\n                    except:\n                        continue\n            except Exception as e:\n                metadata[\"errors\"].append(f\"Error extracting SVGs: {str(e)}\")\n\n            # 3. 提取元数据 (使用已验证的选择器)\n            try:\n                viewport = page.locator(\"meta[name='viewport']\").first.get_attribute(\"content\")\n                metadata[\"page_viewport\"] = viewport\n            except:\n                pass\n\n            context.close()\n\n    except Exception as e:\n        metadata[\"errors\"].append(f\"General Exception: {str(e)}\")\n    finally:\n        if browser:\n            browser.close()\n\n    # 数据清洗和验证\n    valid_results = []\n    for r in results:\n        # 验证房产数据\n        if \"price\" in r or \"address\" in r:\n            if r.get(\"price\") or r.get(\"address\"):\n                valid_results.append(r)\n        # 验证SVG数据\n        elif r.get(\"type\") == \"svg\":\n            valid_results.append(r)\n\n    metadata[\"total_extracted\"] = len(results)\n    metadata[\"valid_count\"] = len(valid_results)\n\n    return {\n        \"results\": valid_results,\n        \"metadata\": metadata\n    }\n\nif __name__ == \"__main__\":\n    import sys\n    url = sys.argv[1] if len(sys.argv) > 1 else \"https://www.zillow.com/\"\n    result = scrape(url)\n    print(json.dumps(result, ensure_ascii=False, indent=2))"
+    },
+    "markdown_report": "```markdown\n# 网站数据侦察报告\n\n## 站点信息\n- URL: https://www.zillow.com/\n- 用户需求: 房地产楼盘站（户型图SVG/PDF/价格）\n- 侦察时间: 2024-05-21\n\n## 侦察总结\n- 估算数据总量: ~100,000,000+ (全美房源，具体数量取决于检索条件)\n- 样本质量分数: 0/1.0 (本次侦察未获取到有效样本)\n- 数据结构化程度: 高 (前端 React 渲染，数据存在于 API 响应中)\n\n## 站点特征分析\n- 页面类型: SPA (单页应用)，列表页与详情页分离\n- 分页方式: 无限滚动\n- 反爬等级: **极高** (Zillow 拥有业界顶尖的反爬虫策略)\n\n## 真实样本预览\n```json\n[]\n```\n*(注：本次侦察未返回有效样本数据，通常原因为请求被 WAF 拦截或未通过指纹验证)*\n\n## 可爬性评估\n- 反爬等级: **高**\n- 技术难度: **复杂**\n- 推荐策略:\n  1. **指纹伪装**: 必须使用浏览器自动化工具（如 Playwright 或 Undetected-Chromedriver），并严格规避 TLS 指纹识别。\n  2. **IP 代理**: 必须使用高质量的住宅代理 IP，数据中心 IP 会被秒封。\n  3. **Cookie 池**: 维护有效的 Cookie 状态，模拟真实用户行为轨迹。\n  4. **数据获取**:\n     - **价格**: 可从列表页 API (`SearchPageState`) 或详情页直接提取。\n     - **户型图**: Zillow 大部分户型图为 JPG/PNG 格式，SVG/PDF 较少见。需深入分析详情页的 `FloorPlans` 组件接口或多媒体 CDN 链接。\n  5. **验证码处理**: 需集成验证码解决服务（如 2Captcha 或 DeathByCaptcha）应对 hCaptcha 或自定义验证。\n```",
+    "generated_code": "from playwright.sync_api import sync_playwright\nimport json\nimport time\nimport random\n\n# 模拟真实用户代理\nUSER_AGENTS = [\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36\",\n    \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36\",\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/114.0\"\n]\n\ndef scrape(url: str) -> dict:\n    results = []\n    browser = None\n    metadata = {\n        \"total_extracted\": 0,\n        \"valid_count\": 0,\n        \"url\": url,\n        \"captcha_detected\": False,\n        \"errors\": []\n    }\n\n    try:\n        with sync_playwright() as p:\n            # 启动浏览器，添加反爬虫参数\n            browser = p.chromium.launch(\n                headless=True,\n                args=[\n                    \"--disable-blink-features=AutomationControlled\",\n                    \"--no-sandbox\",\n                    \"--disable-web-security\",\n                    \"--disable-features=IsolateOrigins,site-per-process\"\n                ]\n            )\n            \n            context = browser.new_context(\n                user_agent=random.choice(USER_AGENTS),\n                viewport={\"width\": 1920, \"height\": 1080},\n                locale=\"en-US\"\n            )\n            page = context.new_page()\n\n            # 访问目标页面\n            try:\n                page.goto(url, wait_until='domcontentloaded', timeout=60000)\n            except Exception as e:\n                metadata[\"errors\"].append(f\"Navigation timeout or error: {str(e)}\")\n\n            # 检查验证码 (根据DOM分析结果)\n            try:\n                captcha_selector = \".px-captcha-container\"\n                if page.locator(captcha_selector).count() > 0:\n                    metadata[\"captcha_detected\"] = True\n                    metadata[\"errors\"].append(\"Captcha detected (PerimeterX/Human Security). Scraping may be limited.\")\n                    # 即使有验证码，也尝试等待片刻看是否能通过\n                    time.sleep(5)\n            except:\n                pass\n\n            # 模拟人类滚动以触发无限加载\n            try:\n                for _ in range(3):\n                    page.mouse.wheel(0, 1000)\n                    time.sleep(random.uniform(1.5, 2.5))\n            except Exception as e:\n                metadata[\"errors\"].append(f\"Scrolling error: {str(e)}\")\n\n            # 等待关键元素加载 (房产卡片)\n            try:\n                # 使用建议的选择器 [data-test='property-card']\n                page.wait_for_selector(\"div[data-test='property-card']\", timeout=15000, state=\"attached\")\n            except Exception:\n                # 如果超时，记录但不中断，尝试提取现有内容\n                metadata[\"errors\"].append(\"Timeout waiting for property cards. Content might be empty.\")\n\n            # === 数据提取 ===\n            \n            # 1. 提取房产列表\n            try:\n                # 使用建议的选择器\n                cards = page.locator(\"div[data-test='property-card']\").all()\n                \n                for card in cards:\n                    item_data = {}\n                    try:\n                        # 提取价格\n                        try:\n                            price_el = card.locator(\"[data-test='property-card-price']\").first\n                            item_data[\"price\"] = price_el.text_content().strip()\n                        except:\n                            item_data[\"price\"] = None\n\n                        # 提取地址\n                        try:\n                            addr_el = card.locator(\"[data-test='property-card-addr']\").first\n                            item_data[\"address\"] = addr_el.text_content().strip()\n                        except:\n                            item_data[\"address\"] = None\n\n                        # 提取链接\n                        try:\n                            link_el = card.locator(\"a\").first\n                            item_data[\"link\"] = link_el.get_attribute(\"href\")\n                            if item_data[\"link\"] and not item_data[\"link\"].startswith(\"http\"):\n                                item_data[\"link\"] = \"https://www.zillow.com\" + item_data[\"link\"]\n                        except:\n                            item_data[\"link\"] = None\n                        \n                        # 提取图片 (作为户型图/房源图的备选)\n                        try:\n                            img_el = card.locator(\"img\").first\n                            item_data[\"image_url\"] = img_el.get_attribute(\"src\")\n                        except:\n                            item_data[\"image_url\"] = None\n\n                        results.append(item_data)\n                    except Exception as e:\n                        continue\n\n            except Exception as e:\n                metadata[\"errors\"].append(f\"Error extracting property cards: {str(e)}\")\n\n            # 2. 提取页面中的 SVG (满足用户对户型图SVG的需求)\n            # 注意：Zillow列表页通常使用img标签，但我们也检查SVG以防万一\n            try:\n                svgs = page.locator(\"svg\").all()\n                for svg in svgs[:5]: # 限制提取数量防止过大\n                    try:\n                        svg_code = svg.evaluate(\"el => el.outerHTML\")\n                        results.append({\n                            \"svg_code\": svg_code,\n                            \"type\": \"svg\",\n                            \"source\": \"page_inline\"\n                        })\n                    except:\n                        continue\n            except Exception as e:\n                metadata[\"errors\"].append(f\"Error extracting SVGs: {str(e)}\")\n\n            # 3. 提取元数据 (使用已验证的选择器)\n            try:\n                viewport = page.locator(\"meta[name='viewport']\").first.get_attribute(\"content\")\n                metadata[\"page_viewport\"] = viewport\n            except:\n                pass\n\n            context.close()\n\n    except Exception as e:\n        metadata[\"errors\"].append(f\"General Exception: {str(e)}\")\n    finally:\n        if browser:\n            browser.close()\n\n    # 数据清洗和验证\n    valid_results = []\n    for r in results:\n        # 验证房产数据\n        if \"price\" in r or \"address\" in r:\n            if r.get(\"price\") or r.get(\"address\"):\n                valid_results.append(r)\n        # 验证SVG数据\n        elif r.get(\"type\") == \"svg\":\n            valid_results.append(r)\n\n    metadata[\"total_extracted\"] = len(results)\n    metadata[\"valid_count\"] = len(valid_results)\n\n    return {\n        \"results\": valid_results,\n        \"metadata\": metadata\n    }\n\nif __name__ == \"__main__\":\n    import sys\n    url = sys.argv[1] if len(sys.argv) > 1 else \"https://www.zillow.com/\"\n    result = scrape(url)\n    print(json.dumps(result, ensure_ascii=False, indent=2))",
+    "stage": "done",
+    "final_state": {
+      "stage": "done",
+      "quality_score": 0,
+      "sample_data": [],
+      "sool_iteration": 6,
+      "failure_history": [
+        {
+          "iteration": 1,
+          "failure_type": "unknown",
+          "root_cause": "'NoneType' object is not subscriptable",
+          "suggested_fix": "检查错误信息",
+          "data_count": 0
+        },
+        {
+          "iteration": 3,
+          "failure_type": "selector_error",
+          "root_cause": "Zillow is a JavaScript-heavy site with infinite scroll. The code only waited for the 'body' tag to load, which occurs before the actual property listings are dynamically rendered. Additionally, navigating to the root URL often results in a homepage or search prompt rather than a list of properties, requiring specific search parameters or interaction to generate the target content. The selectors likely failed because the listing container was empty or not yet rendered.",
+          "suggested_fix": "1. Navigate to a specific search results URL (e.g., 'https://www.zillow.com/homes/' with query parameters) instead of the root URL. 2. Wait for a specific selector that indicates the listing container is populated (e.g., '[data-test=\"property-card\"]' or 'ul.photo-cards'). 3. Implement scrolling logic to trigger the infinite scroll and load more items before extraction. 4. Handle cookie consent or location popups that might block interaction.",
+          "avoid_repeat": "Do not assume data is available immediately after 'domcontentloaded' or 'body' presence. Do not omit scrolling logic for infinite scroll websites. Do not rely on generic selectors to determine if dynamic content has loaded.",
+          "data_count": 0,
+          "website_type": "real_estate",
+          "anti_bot_level": "high",
+          "attempted_strategies": [
+            "validated_selectors"
+          ],
+          "partial_success": {
+            "partial_success": true,
+            "success_rate": 1.0,
+            "issues": [],
+            "strengths": [
+              "Code executed successfully"
+            ],
+            "recommendations": []
+          }
+        }
+      ],
+      "reflection_memory": [
+        "执行失败: 'NoneType' object is not subscriptable，数据量: 0",
+        "```json\n{\n    \"failure_type\": \"selector_error\",\n    \"root_cause\": \"Zillow is a JavaScript-heavy site with infinite scroll. The code only waited for the 'body' tag to load, which occurs before the actual property listings are dynamically rendered. Additionally, navigating to the root URL often results in a homepage or search prompt rather than a list of properties, requiring specific search parameters or interaction to generate the target content. The selectors likely failed because the listing container was empty or not yet rendered.\",\n    \"suggested_fix\": \"1. Navigate to a specific search results URL (e.g., 'https://www.zillow.com/homes/' with query parameters) instead of the root URL. 2. Wait for a specific selector that indicates the listing container is populated (e.g., '[data-test=\\\"property-card\\\"]' or 'ul.photo-cards'). 3. Implement scrolling logic to trigger the infinite scroll and load more items before extraction. 4. Handle cookie consent or location popups that might block interaction.\",\n    \"avoid_repeat\": \"Do not assume data is available immediately after 'domcontentloaded' or 'body' presence. Do not omit scrolling logic for infinite scroll websites. Do not rely on generic selectors to determine if dynamic content has loaded.\"\n}\n```"
+      ],
+      "attempt_signatures": [
+        "2dde0e87",
+        "a57c91a5"
+      ],
+      "quality_issues": [
+        "Խϵ: 0ֱֶοȱʧ"
+      ]
+    }
+  }
+}

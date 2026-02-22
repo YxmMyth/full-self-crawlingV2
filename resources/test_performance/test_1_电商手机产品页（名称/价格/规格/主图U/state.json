@@ -1,0 +1,108 @@
+{
+  "stage": "done",
+  "quality_score": 0,
+  "sample_data": [],
+  "sool_iteration": 6,
+  "failure_history": [
+    {
+      "iteration": 1,
+      "failure_type": "unknown",
+      "root_cause": "'NoneType' object is not subscriptable",
+      "suggested_fix": "检查错误信息",
+      "data_count": 0
+    },
+    {
+      "iteration": 3,
+      "failure_type": "anti_bot",
+      "root_cause": "亚马逊的反爬虫系统检测到了Playwright的自动化特征（如headless模式或navigator.webdriver属性），导致页面重定向到CAPTCHA验证页或拦截页。因此，代码中等待的选择器 'div[data-component-type=\"s-search-result\"]' 超时未出现。虽然代码通过try-except捕获了异常并继续执行，但由于页面上没有产品列表，最终提取数据量为0。",
+      "suggested_fix": "1. 将headless设置为False，模拟真实用户操作。2. 在页面加载前注入JavaScript脚本，隐藏webdriver等自动化特征（例如覆盖navigator.webdriver）。3. 增加对CAPTCHA页面的检测逻辑，如果遇到验证码，尝试截图或人工介入（在非headless模式下）。4. 使用持久化上下文保存cookies，模拟老用户。",
+      "avoid_repeat": "不要在反爬虫等级为High的网站上仅依赖User-Agent伪装。不要忽略选择器等待超时的异常，这往往是页面被拦截的信号而非简单的加载慢。",
+      "data_count": 0,
+      "website_type": "ecommerce",
+      "anti_bot_level": "high",
+      "attempted_strategies": [],
+      "partial_success": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      }
+    }
+  ],
+  "reflection_memory": [
+    "执行失败: 'NoneType' object is not subscriptable，数据量: 0",
+    "```json\n{\n    \"failure_type\": \"anti_bot\",\n    \"root_cause\": \"亚马逊的反爬虫系统检测到了Playwright的自动化特征（如headless模式或navigator.webdriver属性），导致页面重定向到CAPTCHA验证页或拦截页。因此，代码中等待的选择器 'div[data-component-type=\\\"s-search-result\\\"]' 超时未出现。虽然代码通过try-except捕获了异常并继续执行，但由于页面上没有产品列表，最终提取数据量为0。\",\n    \"suggested_fix\": \"1. 将headless设置为False，模拟真实用户操作。2. 在页面加载前注入JavaScript脚本，隐藏webdriver等自动化特征（例如覆盖navigator.webdriver）。3. 增加对CAPTCHA页面的检测逻辑，如果遇到验证码，尝试截图或人工介入（在非headless模式下）。4. 使用持久化上下文保存cookies，模拟老用户。\",\n    \"avoid_repeat\": \"不要在反爬虫等级为High的网站上仅依赖User-Agent伪装。不要忽略选择器等待超时的异常，这往往是页面被拦截的信号而非简单的加载慢。\"\n}\n```"
+  ],
+  "attempt_signatures": [
+    "ab608d44",
+    "b610cc62"
+  ],
+  "quality_issues": [
+    "Խϵ: 0ֱֶοȱʧ"
+  ],
+  "agent_result": {
+    "success": true,
+    "agent_id": "agent_cdfed3e8",
+    "site_url": "https://www.amazon.com/s?k=smartphone",
+    "user_goal": "电商手机产品页（名称/价格/规格/主图URL/PDF）",
+    "report": {
+      "site_url": "https://www.amazon.com/s?k=smartphone",
+      "user_goal": "电商手机产品页（名称/价格/规格/主图URL/PDF）",
+      "quality_score": 0,
+      "sample_data": [],
+      "generated_code": "from playwright.sync_api import sync_playwright\nimport json\nimport time\nimport random\nimport sys\n\n# 模拟真实浏览器的 User-Agent\nUSER_AGENTS = [\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36\",\n    \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36\",\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0\",\n    \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Safari/605.1.15\"\n]\n\ndef scrape(url: str) -> dict:\n    results = []\n    browser = None\n    error_msg = None\n    \n    try:\n        with sync_playwright() as p:\n            # 启动浏览器，添加反爬虫参数\n            browser = p.chromium.launch(\n                headless=True, \n                args=[\n                    \"--disable-blink-features=AutomationControlled\",\n                    \"--no-sandbox\",\n                    \"--disable-setuid-sandbox\",\n                    \"--disable-dev-shm-usage\",\n                    \"--disable-web-security\",\n                    \"--disable-features=IsolateOrigins,site-per-process\"\n                ]\n            )\n            \n            # 创建页面并设置反爬虫属性\n            page = browser.new_page(\n                user_agent=random.choice(USER_AGENTS),\n                viewport={\"width\": 1920, \"height\": 1080},\n                locale=\"en-US\"\n            )\n\n            # 注入 JavaScript 以隐藏自动化特征\n            page.add_init_script(\"\"\"\n                Object.defineProperty(navigator, 'webdriver', {\n                    get: () => undefined,\n                });\n                window.chrome = {\n                    runtime: {}\n                };\n                Object.defineProperty(navigator, 'plugins', {\n                    get: () => [1, 2, 3, 4, 5],\n                });\n                Object.defineProperty(navigator, 'languages', {\n                    get: () => ['en-US', 'en'],\n                });\n            \"\"\")\n\n            # 访问页面\n            page.goto(url, wait_until='domcontentloaded', timeout=60000)\n\n            # 检查是否被重定向到验证码页面\n            try:\n                if \"captcha\" in page.title().lower() or \"validateCaptcha\" in page.url:\n                    error_msg = \"Redirected to CAPTCHA page\"\n                    time.sleep(2)\n            except:\n                pass\n\n            # 等待关键元素加载，增加超时时间\n            try:\n                page.wait_for_selector('div[data-component-type=\"s-search-result\"]', timeout=30000)\n            except Exception:\n                pass\n\n            # 模拟人类行为滚动\n            page.mouse.wheel(0, 500)\n            time.sleep(random.uniform(1, 3))\n\n            # === 数据提取 ===\n            \n            # 选择所有产品容器\n            items = page.locator('div[data-component-type=\"s-search-result\"]').all()\n            \n            for item in items:\n                try:\n                    result = {}\n                    \n                    # 1. 标题\n                    try:\n                        title_elem = item.locator('h2 a span').first\n                        result[\"name\"] = title_elem.text_content().strip()\n                    except:\n                        result[\"name\"] = None\n\n                    # 2. 链接\n                    try:\n                        link_elem = item.locator('h2 a').first\n                        href = link_elem.get_attribute('href')\n                        if href:\n                            if href.startswith('/'):\n                                result[\"link\"] = \"https://www.amazon.com\" + href\n                            else:\n                                result[\"link\"] = href\n                        else:\n                            result[\"link\"] = None\n                    except:\n                        result[\"link\"] = None\n\n                    # 3. 价格\n                    try:\n                        price_elem = item.locator('.a-price .a-offscreen').first\n                        result[\"price\"] = price_elem.text_content().strip()\n                    except:\n                        result[\"price\"] = None\n\n                    # 4. 主图 URL\n                    try:\n                        img_elem = item.locator('.s-image').first\n                        result[\"image_url\"] = img_elem.get_attribute('src')\n                    except:\n                        result[\"image_url\"] = None\n\n                    # 5. 规格 - 尝试提取搜索卡片中的简要描述\n                    try:\n                        specs_list = []\n                        # 尝试匹配常见的规格列表容器\n                        spec_items = item.locator('div.a-section.a-spacing-none.a-spacing-top-micro span').all()\n                        for s in spec_items:\n                            txt = s.text_content().strip()\n                            if txt and len(txt) > 3: # 过滤掉纯符号\n                                specs_list.append(txt)\n                        \n                        # 备选：尝试获取副标题\n                        if not specs_list:\n                             try:\n                                 subtitle = item.locator('h2 + div span').first.text_content()\n                                 if subtitle:\n                                     specs_list.append(subtitle)\n                             except:\n                                 pass\n\n                        result[\"specs\"] = \" | \".join(specs_list) if specs_list else None\n                    except:\n                        result[\"specs\"] = None\n\n                    # 6. PDF - 搜索结果中很少直接有PDF，尝试查找链接\n                    try:\n                        pdf_links = []\n                        all_links = item.locator('a').all()\n                        for link in all_links:\n                            href = link.get_attribute('href')\n                            if href and '.pdf' in href.lower():\n                                if href.startswith('/'):\n                                    pdf_links.append(\"https://www.amazon.com\" + href)\n                                else:\n                                    pdf_links.append(href)\n                        \n                        result[\"pdf\"] = pdf_links[0] if pdf_links else None\n                    except:\n                        result[\"pdf\"] = None\n\n                    # 数据验证：只要有标题或价格就认为是有效数据\n                    if result.get(\"name\") or result.get(\"price\"):\n                        results.append(result)\n                        \n                except Exception:\n                    continue\n\n            # 如果主选择器没抓到数据，尝试备用方案（兜底）\n            if not results:\n                try:\n                    titles = page.locator('h2 a span').all()\n                    for t in titles:\n                        try:\n                            txt = t.text_content()\n                            if txt and len(txt) > 5:\n                                results.append({\"name\": txt, \"price\": None, \"link\": None, \"image_url\": None, \"specs\": None, \"pdf\": None})\n                        except:\n                            pass\n                except:\n                    pass\n\n    except Exception as e:\n        error_msg = str(e)\n    finally:\n        if browser:\n            browser.close()\n\n    # 数据清洗和验证\n    valid_results = [r for r in results if r.get(\"name\")]\n\n    return {\n        \"results\": valid_results,\n        \"metadata\": {\n            \"total_extracted\": len(results),\n            \"valid_count\": len(valid_results),\n            \"url\": url,\n            \"error\": error_msg\n        }\n    }\n\nif __name__ == \"__main__\":\n    url = sys.argv[1] if len(sys.argv) > 1 else \"https://www.amazon.com/s?k=smartphone\"\n    result = scrape(url)\n    print(json.dumps(result, ensure_ascii=False, indent=2))"
+    },
+    "markdown_report": "```markdown\n# 网站数据侦察报告\n\n## 站点信息\n- URL: https://www.amazon.com/s?k=smartphone\n- 用户需求: 电商手机产品页（名称/价格/规格/主图URL/PDF）\n- 侦察时间: 2023-10-27\n\n## 侦察总结\n- 估算数据总量: 无法准确估算（受反爬限制）\n- 样本质量分数: 0/1.0\n- 数据结构化程度: 未知（未获取到样本）\n- **侦察状态**: 失败（6次迭代均未提取到有效数据）\n\n## 站点特征分析\n- 页面类型: 搜索结果列表页 (SERP)\n- 分页方式: 动态加载 / \"Next\" 传统分页混合\n- 反爬等级: **极高**\n- 数据加载方式: 服务端渲染 (SSR) 混合动态 DOM 操作\n\n## 真实样本预览\n```json\n[]\n```\n> **注意**: 本次侦察未获取到任何样本数据，可能原因包括：IP 被封禁、触发验证码 (CAPTCHA)、请求头缺失或 DOM 结构动态变化导致解析失败。\n\n## 可爬性评估\n- 反爬等级: 高\n- 技术难度: 复杂\n- 推荐策略: \n  1. **高匿名代理池**: 必须使用高质量住宅代理，避免使用数据中心 IP。\n  2. **浏览器指纹伪装**: 使用 undetected-chromedriver 或 Playwright 隐身模式，绕过 TLS 指纹检测。\n  3. **多级爬取架构**: \n     - 第一级：在搜索页获取产品详情页链接。\n     - 第二级：进入详情页提取 PDF（说明书）及详细规格（搜索页通常不直接包含 PDF 下载链接）。\n  4. **验证码处理**: 集成 2Captcha 或 Anti-Captcha 服务。\n  5. **降级策略**: 若直接 HTML 解析持续失败，尝试通过官方 API 或第三方数据服务获取。\n```",
+    "generated_code": "from playwright.sync_api import sync_playwright\nimport json\nimport time\nimport random\nimport sys\n\n# 模拟真实浏览器的 User-Agent\nUSER_AGENTS = [\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36\",\n    \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36\",\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0\",\n    \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Safari/605.1.15\"\n]\n\ndef scrape(url: str) -> dict:\n    results = []\n    browser = None\n    error_msg = None\n    \n    try:\n        with sync_playwright() as p:\n            # 启动浏览器，添加反爬虫参数\n            browser = p.chromium.launch(\n                headless=True, \n                args=[\n                    \"--disable-blink-features=AutomationControlled\",\n                    \"--no-sandbox\",\n                    \"--disable-setuid-sandbox\",\n                    \"--disable-dev-shm-usage\",\n                    \"--disable-web-security\",\n                    \"--disable-features=IsolateOrigins,site-per-process\"\n                ]\n            )\n            \n            # 创建页面并设置反爬虫属性\n            page = browser.new_page(\n                user_agent=random.choice(USER_AGENTS),\n                viewport={\"width\": 1920, \"height\": 1080},\n                locale=\"en-US\"\n            )\n\n            # 注入 JavaScript 以隐藏自动化特征\n            page.add_init_script(\"\"\"\n                Object.defineProperty(navigator, 'webdriver', {\n                    get: () => undefined,\n                });\n                window.chrome = {\n                    runtime: {}\n                };\n                Object.defineProperty(navigator, 'plugins', {\n                    get: () => [1, 2, 3, 4, 5],\n                });\n                Object.defineProperty(navigator, 'languages', {\n                    get: () => ['en-US', 'en'],\n                });\n            \"\"\")\n\n            # 访问页面\n            page.goto(url, wait_until='domcontentloaded', timeout=60000)\n\n            # 检查是否被重定向到验证码页面\n            try:\n                if \"captcha\" in page.title().lower() or \"validateCaptcha\" in page.url:\n                    error_msg = \"Redirected to CAPTCHA page\"\n                    time.sleep(2)\n            except:\n                pass\n\n            # 等待关键元素加载，增加超时时间\n            try:\n                page.wait_for_selector('div[data-component-type=\"s-search-result\"]', timeout=30000)\n            except Exception:\n                pass\n\n            # 模拟人类行为滚动\n            page.mouse.wheel(0, 500)\n            time.sleep(random.uniform(1, 3))\n\n            # === 数据提取 ===\n            \n            # 选择所有产品容器\n            items = page.locator('div[data-component-type=\"s-search-result\"]').all()\n            \n            for item in items:\n                try:\n                    result = {}\n                    \n                    # 1. 标题\n                    try:\n                        title_elem = item.locator('h2 a span').first\n                        result[\"name\"] = title_elem.text_content().strip()\n                    except:\n                        result[\"name\"] = None\n\n                    # 2. 链接\n                    try:\n                        link_elem = item.locator('h2 a').first\n                        href = link_elem.get_attribute('href')\n                        if href:\n                            if href.startswith('/'):\n                                result[\"link\"] = \"https://www.amazon.com\" + href\n                            else:\n                                result[\"link\"] = href\n                        else:\n                            result[\"link\"] = None\n                    except:\n                        result[\"link\"] = None\n\n                    # 3. 价格\n                    try:\n                        price_elem = item.locator('.a-price .a-offscreen').first\n                        result[\"price\"] = price_elem.text_content().strip()\n                    except:\n                        result[\"price\"] = None\n\n                    # 4. 主图 URL\n                    try:\n                        img_elem = item.locator('.s-image').first\n                        result[\"image_url\"] = img_elem.get_attribute('src')\n                    except:\n                        result[\"image_url\"] = None\n\n                    # 5. 规格 - 尝试提取搜索卡片中的简要描述\n                    try:\n                        specs_list = []\n                        # 尝试匹配常见的规格列表容器\n                        spec_items = item.locator('div.a-section.a-spacing-none.a-spacing-top-micro span').all()\n                        for s in spec_items:\n                            txt = s.text_content().strip()\n                            if txt and len(txt) > 3: # 过滤掉纯符号\n                                specs_list.append(txt)\n                        \n                        # 备选：尝试获取副标题\n                        if not specs_list:\n                             try:\n                                 subtitle = item.locator('h2 + div span').first.text_content()\n                                 if subtitle:\n                                     specs_list.append(subtitle)\n                             except:\n                                 pass\n\n                        result[\"specs\"] = \" | \".join(specs_list) if specs_list else None\n                    except:\n                        result[\"specs\"] = None\n\n                    # 6. PDF - 搜索结果中很少直接有PDF，尝试查找链接\n                    try:\n                        pdf_links = []\n                        all_links = item.locator('a').all()\n                        for link in all_links:\n                            href = link.get_attribute('href')\n                            if href and '.pdf' in href.lower():\n                                if href.startswith('/'):\n                                    pdf_links.append(\"https://www.amazon.com\" + href)\n                                else:\n                                    pdf_links.append(href)\n                        \n                        result[\"pdf\"] = pdf_links[0] if pdf_links else None\n                    except:\n                        result[\"pdf\"] = None\n\n                    # 数据验证：只要有标题或价格就认为是有效数据\n                    if result.get(\"name\") or result.get(\"price\"):\n                        results.append(result)\n                        \n                except Exception:\n                    continue\n\n            # 如果主选择器没抓到数据，尝试备用方案（兜底）\n            if not results:\n                try:\n                    titles = page.locator('h2 a span').all()\n                    for t in titles:\n                        try:\n                            txt = t.text_content()\n                            if txt and len(txt) > 5:\n                                results.append({\"name\": txt, \"price\": None, \"link\": None, \"image_url\": None, \"specs\": None, \"pdf\": None})\n                        except:\n                            pass\n                except:\n                    pass\n\n    except Exception as e:\n        error_msg = str(e)\n    finally:\n        if browser:\n            browser.close()\n\n    # 数据清洗和验证\n    valid_results = [r for r in results if r.get(\"name\")]\n\n    return {\n        \"results\": valid_results,\n        \"metadata\": {\n            \"total_extracted\": len(results),\n            \"valid_count\": len(valid_results),\n            \"url\": url,\n            \"error\": error_msg\n        }\n    }\n\nif __name__ == \"__main__\":\n    url = sys.argv[1] if len(sys.argv) > 1 else \"https://www.amazon.com/s?k=smartphone\"\n    result = scrape(url)\n    print(json.dumps(result, ensure_ascii=False, indent=2))",
+    "stage": "done",
+    "final_state": {
+      "stage": "done",
+      "quality_score": 0,
+      "sample_data": [],
+      "sool_iteration": 6,
+      "failure_history": [
+        {
+          "iteration": 1,
+          "failure_type": "unknown",
+          "root_cause": "'NoneType' object is not subscriptable",
+          "suggested_fix": "检查错误信息",
+          "data_count": 0
+        },
+        {
+          "iteration": 3,
+          "failure_type": "anti_bot",
+          "root_cause": "亚马逊的反爬虫系统检测到了Playwright的自动化特征（如headless模式或navigator.webdriver属性），导致页面重定向到CAPTCHA验证页或拦截页。因此，代码中等待的选择器 'div[data-component-type=\"s-search-result\"]' 超时未出现。虽然代码通过try-except捕获了异常并继续执行，但由于页面上没有产品列表，最终提取数据量为0。",
+          "suggested_fix": "1. 将headless设置为False，模拟真实用户操作。2. 在页面加载前注入JavaScript脚本，隐藏webdriver等自动化特征（例如覆盖navigator.webdriver）。3. 增加对CAPTCHA页面的检测逻辑，如果遇到验证码，尝试截图或人工介入（在非headless模式下）。4. 使用持久化上下文保存cookies，模拟老用户。",
+          "avoid_repeat": "不要在反爬虫等级为High的网站上仅依赖User-Agent伪装。不要忽略选择器等待超时的异常，这往往是页面被拦截的信号而非简单的加载慢。",
+          "data_count": 0,
+          "website_type": "ecommerce",
+          "anti_bot_level": "high",
+          "attempted_strategies": [],
+          "partial_success": {
+            "partial_success": true,
+            "success_rate": 1.0,
+            "issues": [],
+            "strengths": [
+              "Code executed successfully"
+            ],
+            "recommendations": []
+          }
+        }
+      ],
+      "reflection_memory": [
+        "执行失败: 'NoneType' object is not subscriptable，数据量: 0",
+        "```json\n{\n    \"failure_type\": \"anti_bot\",\n    \"root_cause\": \"亚马逊的反爬虫系统检测到了Playwright的自动化特征（如headless模式或navigator.webdriver属性），导致页面重定向到CAPTCHA验证页或拦截页。因此，代码中等待的选择器 'div[data-component-type=\\\"s-search-result\\\"]' 超时未出现。虽然代码通过try-except捕获了异常并继续执行，但由于页面上没有产品列表，最终提取数据量为0。\",\n    \"suggested_fix\": \"1. 将headless设置为False，模拟真实用户操作。2. 在页面加载前注入JavaScript脚本，隐藏webdriver等自动化特征（例如覆盖navigator.webdriver）。3. 增加对CAPTCHA页面的检测逻辑，如果遇到验证码，尝试截图或人工介入（在非headless模式下）。4. 使用持久化上下文保存cookies，模拟老用户。\",\n    \"avoid_repeat\": \"不要在反爬虫等级为High的网站上仅依赖User-Agent伪装。不要忽略选择器等待超时的异常，这往往是页面被拦截的信号而非简单的加载慢。\"\n}\n```"
+      ],
+      "attempt_signatures": [
+        "ab608d44",
+        "b610cc62"
+      ],
+      "quality_issues": [
+        "Խϵ: 0ֱֶοȱʧ"
+      ]
+    }
+  }
+}

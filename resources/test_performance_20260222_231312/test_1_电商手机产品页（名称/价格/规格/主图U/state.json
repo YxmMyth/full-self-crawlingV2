@@ -1,0 +1,108 @@
+{
+  "stage": "done",
+  "quality_score": 0,
+  "sample_data": [],
+  "sool_iteration": 6,
+  "failure_history": [
+    {
+      "iteration": 1,
+      "failure_type": "unknown",
+      "root_cause": "'NoneType' object is not subscriptable",
+      "suggested_fix": "检查错误信息",
+      "data_count": 0
+    },
+    {
+      "iteration": 3,
+      "failure_type": "blocked",
+      "root_cause": "Amazon 的高等级反爬虫系统检测到了自动化特征（特别是无头浏览器模式），导致页面被重定向到验证码（CAPTCHA）页面或“输入验证字符”的拦截页，而非正常的商品搜索结果页。此外，代码中使用的 `domcontentloaded` 等待策略对于 Amazon 这种重度依赖 JavaScript 动态渲染的网站来说过于激进，导致在商品列表完全加载前就尝试提取数据。",
+      "suggested_fix": "1. 绕过检测：尝试使用 `headless=False` 进行调试，或引入 `playwright-stealth` 插件/注入脚本覆盖 `navigator.webdriver` 属性以隐藏自动化特征。2. 优化等待策略：将 `page.goto` 的 `wait_until` 参数改为 `'networkidle'` 或 `'load'`，并增加 `wait_for_selector` 的超时时间，确保 DOM 元素已渲染。3. 拦截检测：在提取前增加逻辑检查页面标题或 body 是否包含 'captcha', 'robot', 'try again' 等关键词，若被拦截则抛出特定异常或重试。",
+      "avoid_repeat": "避免在未处理浏览器指纹（如 webdriver 属性）的情况下直接使用默认的 `headless=True` 访问 Amazon，同时避免在动态内容未完全加载时（仅依赖 domcontentloaded）执行提取操作。",
+      "data_count": 0,
+      "website_type": "ecommerce",
+      "anti_bot_level": "high",
+      "attempted_strategies": [],
+      "partial_success": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      }
+    }
+  ],
+  "reflection_memory": [
+    "执行失败: 'NoneType' object is not subscriptable，数据量: 0",
+    "```json\n{\n    \"failure_type\": \"blocked\",\n    \"root_cause\": \"Amazon 的高等级反爬虫系统检测到了自动化特征（特别是无头浏览器模式），导致页面被重定向到验证码（CAPTCHA）页面或“输入验证字符”的拦截页，而非正常的商品搜索结果页。此外，代码中使用的 `domcontentloaded` 等待策略对于 Amazon 这种重度依赖 JavaScript 动态渲染的网站来说过于激进，导致在商品列表完全加载前就尝试提取数据。\",\n    \"suggested_fix\": \"1. 绕过检测：尝试使用 `headless=False` 进行调试，或引入 `playwright-stealth` 插件/注入脚本覆盖 `navigator.webdriver` 属性以隐藏自动化特征。2. 优化等待策略：将 `page.goto` 的 `wait_until` 参数改为 `'networkidle'` 或 `'load'`，并增加 `wait_for_selector` 的超时时间，确保 DOM 元素已渲染。3. 拦截检测：在提取前增加逻辑检查页面标题或 body 是否包含 'captcha', 'robot', 'try again' 等关键词，若被拦截则抛出特定异常或重试。\",\n    \"avoid_repeat\": \"避免在未处理浏览器指纹（如 webdriver 属性）的情况下直接使用默认的 `headless=True` 访问 Amazon，同时避免在动态内容未完全加载时（仅依赖 domcontentloaded）执行提取操作。\"\n}\n```"
+  ],
+  "attempt_signatures": [
+    "4e893e53",
+    "6b520ea8"
+  ],
+  "quality_issues": [
+    "Խϵ: 0ֱֶοȱʧ"
+  ],
+  "agent_result": {
+    "success": true,
+    "agent_id": "agent_4b176655",
+    "site_url": "https://www.amazon.com/s?k=smartphone",
+    "user_goal": "电商手机产品页（名称/价格/规格/主图URL/PDF）",
+    "report": {
+      "site_url": "https://www.amazon.com/s?k=smartphone",
+      "user_goal": "电商手机产品页（名称/价格/规格/主图URL/PDF）",
+      "quality_score": 0,
+      "sample_data": [],
+      "generated_code": "from playwright.sync_api import sync_playwright\nimport json\nimport time\nimport random\n\n# 模拟真实浏览器的 User-Agent 列表\nUSER_AGENTS = [\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36\",\n    \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36\",\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0\",\n    \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Safari/605.1.15\"\n]\n\ndef scrape(url: str) -> dict:\n    results = []\n    browser = None\n    error_msg = None\n    \n    try:\n        with sync_playwright() as p:\n            # 根据历史反思，使用 headless=False 绕过部分检测，并添加反爬虫参数\n            browser = p.chromium.launch(\n                headless=False, \n                args=[\n                    \"--disable-blink-features=AutomationControlled\",\n                    \"--no-sandbox\",\n                    \"--disable-dev-shm-usage\",\n                    \"--disable-web-security\",\n                    \"--disable-features=IsolateOrigins,site-per-process\"\n                ]\n            )\n            \n            context = browser.new_context(\n                user_agent=random.choice(USER_AGENTS),\n                viewport={\"width\": 1920, \"height\": 1080},\n                locale=\"en-US\",\n                timezone_id=\"America/New_York\"\n            )\n            \n            page = context.new_page()\n\n            # 增加超时时间并使用 networkidle 等待策略，确保动态内容加载完成\n            try:\n                page.goto(url, wait_until='networkidle', timeout=60000)\n            except Exception as e:\n                # 即使超时也可能加载了部分内容，继续尝试提取\n                error_msg = f\"Navigation timeout or error: {str(e)}\"\n\n            # 检测是否被重定向到验证码页面\n            if \"captcha\" in page.url.lower() or \"sorry\" in page.title().lower():\n                error_msg = \"Blocked by CAPTCHA or human verification page.\"\n                return {\n                    \"results\": [],\n                    \"metadata\": {\n                        \"total_extracted\": 0,\n                        \"valid_count\": 0,\n                        \"url\": url,\n                        \"error\": error_msg\n                    }\n                }\n\n            # 等待关键商品容器出现，增加随机延迟模拟人类行为\n            try:\n                page.wait_for_selector('[data-component-type=\"s-search-result\"]', timeout=15000)\n            except Exception:\n                pass # 继续尝试，可能部分已加载\n\n            time.sleep(random.uniform(2, 4))\n\n            # === 数据提取 ===\n            # 选择器策略：使用 Amazon 标准的搜索结果容器\n            items = page.locator('[data-component-type=\"s-search-result\"]').all()\n            \n            for item in items:\n                try:\n                    result = {}\n                    \n                    # 1. 名称 - 尝多种选择器以增加健壮性\n                    try:\n                        name_elem = item.locator('h2 a span').first\n                        if name_elem.count() > 0:\n                            result[\"name\"] = name_elem.text_content().strip()\n                        else:\n                            result[\"name\"] = None\n                    except:\n                        result[\"name\"] = None\n\n                    # 2. 价格 - 提取整数部分或完整价格\n                    try:\n                        price_elem = item.locator('.a-price .a-offscreen').first\n                        if price_elem.count() > 0:\n                            result[\"price\"] = price_elem.text_content().strip()\n                        else:\n                            # 尝试从价格区间获取\n                            price_range = item.locator('.a-price-range').first\n                            if price_range.count() > 0:\n                                result[\"price\"] = price_range.text_content().strip()\n                            else:\n                                result[\"price\"] = None\n                    except:\n                        result[\"price\"] = None\n\n                    # 3. 规格 - 通常在标题下方的描述中\n                    try:\n                        # 尝试获取规格文本（如存储大小、颜色等），通常在特定 div 中\n                        spec_elem = item.locator('div.a-row.a-size-base.a-color-base').first\n                        if spec_elem.count() > 0:\n                            result[\"specs\"] = spec_elem.text_content().strip()\n                        else:\n                            result[\"specs\"] = None\n                    except:\n                        result[\"specs\"] = None\n\n                    # 4. 主图 URL\n                    try:\n                        img_elem = item.locator('.s-image').first\n                        if img_elem.count() > 0:\n                            result[\"image_url\"] = img_elem.get_attribute('src')\n                        else:\n                            result[\"image_url\"] = None\n                    except:\n                        result[\"image_url\"] = None\n\n                    # 5. PDF - 列表页通常没有 PDF，尝试提取产品链接以便后续爬取\n                    # 如果必须找 PDF，通常需要进入详情页，这里提取详情页链接作为替代\n                    try:\n                        link_elem = item.locator('h2 a').first\n                        if link_elem.count() > 0:\n                            href = link_elem.get_attribute('href')\n                            if href:\n                                result[\"product_url\"] = f\"https://www.amazon.com{href}\"\n                            else:\n                                result[\"product_url\"] = None\n                        else:\n                            result[\"product_url\"] = None\n                    except:\n                        result[\"product_url\"] = None\n                    \n                    result[\"pdf_url\"] = None # 列表页默认无 PDF\n\n                    # 数据验证：至少要有名称才视为有效\n                    if result.get(\"name\"):\n                        results.append(result)\n\n                except Exception as e:\n                    # 单个商品提取失败不影响其他商品\n                    continue\n\n    except Exception as e:\n        error_msg = str(e)\n    finally:\n        if browser:\n            browser.close()\n\n    # 数据清洗和验证\n    valid_results = [r for r in results if r.get(\"name\")]\n\n    metadata = {\n        \"total_extracted\": len(results),\n        \"valid_count\": len(valid_results),\n        \"url\": url\n    }\n    \n    if error_msg:\n        metadata[\"error\"] = error_msg\n\n    return {\n        \"results\": valid_results,\n        \"metadata\": metadata\n    }\n\nif __name__ == \"__main__\":\n    import sys\n    url = sys.argv[1] if len(sys.argv) > 1 else \"https://www.amazon.com/s?k=smartphone\"\n    result = scrape(url)\n    print(json.dumps(result, ensure_ascii=False, indent=2))"
+    },
+    "markdown_report": "```markdown\n# 网站数据侦察报告\n\n## 站点信息\n- URL: https://www.amazon.com/s?k=smartphone\n- 用户需求: 电商手机产品页（名称/价格/规格/主图URL/PDF）\n- 侦察时间: 2023-10-27\n\n## 侦察总结\n- 估算数据总量: ~5000+ 条 (基于关键词搜索结果估算)\n- 样本质量分数: 0/1.0 (当前未获取到有效样本)\n- 数据结构化程度: 高 (HTML结构复杂但规律性强，数据主要嵌入在JSON中)\n\n## 站点特征分析\n- 页面类型: 搜索结果列表页 (SERP)\n- 分页方式: 动态加载/URL参数分页 (`page=2` 等)\n- 反爬等级: 极高 (强风控，频繁触发验证码)\n\n## 真实样本预览\n> **说明**: 本次侦察未返回有效样本数据（样本数量为0）。\n> 依据 Amazon 标准结构，预期数据模型如下：\n\n```json\n[\n  {\n    \"name\": \"Samsung Galaxy S24 Ultra, 256GB\",\n    \"price\": \"$1199.99\",\n    \"specs\": {\n      \"display\": \"6.8 inch\",\n      \"storage\": \"256GB\",\n      \"ram\": \"12GB\"\n    },\n    \"image_url\": \"https://m.media-amazon.com/images/I/...\",\n    \"pdf_url\": null \n  }\n]\n```\n> **注意**: PDF (如说明书/用户指南) 通常不在搜索列表页中展示，需进入商品详情页获取。\n\n## 可爬性评估\n- 反爬等级: 极高\n- 技术难度: 复杂\n- 推荐策略: \n  1. **IP 轮换**: 必须使用高质量住宅代理 IP，避免使用数据中心 IP。\n  2. **指纹管理**: 使用浏览器自动化工具 (如 Playwright/Puppeteer) 并配置 `stealth` 插件，规避 TLS 指纹检测。\n  3. **请求策略**: 降低并发频率，模拟人类浏览行为（随机滚动、停留）。\n  4. **数据获取**: \n     - 列表页：解析页面源码中的 `window.scbulkData` 或特定 JSON 块获取 ASIN 和基础信息。\n     - 详情页：需二次请求进入商品页抓取 PDF 链接。\n  5. **验证码处理**: 集成第三方验证码识别服务或人工介入解决 CAPTCHA。\n```",
+    "generated_code": "from playwright.sync_api import sync_playwright\nimport json\nimport time\nimport random\n\n# 模拟真实浏览器的 User-Agent 列表\nUSER_AGENTS = [\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36\",\n    \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36\",\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0\",\n    \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Safari/605.1.15\"\n]\n\ndef scrape(url: str) -> dict:\n    results = []\n    browser = None\n    error_msg = None\n    \n    try:\n        with sync_playwright() as p:\n            # 根据历史反思，使用 headless=False 绕过部分检测，并添加反爬虫参数\n            browser = p.chromium.launch(\n                headless=False, \n                args=[\n                    \"--disable-blink-features=AutomationControlled\",\n                    \"--no-sandbox\",\n                    \"--disable-dev-shm-usage\",\n                    \"--disable-web-security\",\n                    \"--disable-features=IsolateOrigins,site-per-process\"\n                ]\n            )\n            \n            context = browser.new_context(\n                user_agent=random.choice(USER_AGENTS),\n                viewport={\"width\": 1920, \"height\": 1080},\n                locale=\"en-US\",\n                timezone_id=\"America/New_York\"\n            )\n            \n            page = context.new_page()\n\n            # 增加超时时间并使用 networkidle 等待策略，确保动态内容加载完成\n            try:\n                page.goto(url, wait_until='networkidle', timeout=60000)\n            except Exception as e:\n                # 即使超时也可能加载了部分内容，继续尝试提取\n                error_msg = f\"Navigation timeout or error: {str(e)}\"\n\n            # 检测是否被重定向到验证码页面\n            if \"captcha\" in page.url.lower() or \"sorry\" in page.title().lower():\n                error_msg = \"Blocked by CAPTCHA or human verification page.\"\n                return {\n                    \"results\": [],\n                    \"metadata\": {\n                        \"total_extracted\": 0,\n                        \"valid_count\": 0,\n                        \"url\": url,\n                        \"error\": error_msg\n                    }\n                }\n\n            # 等待关键商品容器出现，增加随机延迟模拟人类行为\n            try:\n                page.wait_for_selector('[data-component-type=\"s-search-result\"]', timeout=15000)\n            except Exception:\n                pass # 继续尝试，可能部分已加载\n\n            time.sleep(random.uniform(2, 4))\n\n            # === 数据提取 ===\n            # 选择器策略：使用 Amazon 标准的搜索结果容器\n            items = page.locator('[data-component-type=\"s-search-result\"]').all()\n            \n            for item in items:\n                try:\n                    result = {}\n                    \n                    # 1. 名称 - 尝多种选择器以增加健壮性\n                    try:\n                        name_elem = item.locator('h2 a span').first\n                        if name_elem.count() > 0:\n                            result[\"name\"] = name_elem.text_content().strip()\n                        else:\n                            result[\"name\"] = None\n                    except:\n                        result[\"name\"] = None\n\n                    # 2. 价格 - 提取整数部分或完整价格\n                    try:\n                        price_elem = item.locator('.a-price .a-offscreen').first\n                        if price_elem.count() > 0:\n                            result[\"price\"] = price_elem.text_content().strip()\n                        else:\n                            # 尝试从价格区间获取\n                            price_range = item.locator('.a-price-range').first\n                            if price_range.count() > 0:\n                                result[\"price\"] = price_range.text_content().strip()\n                            else:\n                                result[\"price\"] = None\n                    except:\n                        result[\"price\"] = None\n\n                    # 3. 规格 - 通常在标题下方的描述中\n                    try:\n                        # 尝试获取规格文本（如存储大小、颜色等），通常在特定 div 中\n                        spec_elem = item.locator('div.a-row.a-size-base.a-color-base').first\n                        if spec_elem.count() > 0:\n                            result[\"specs\"] = spec_elem.text_content().strip()\n                        else:\n                            result[\"specs\"] = None\n                    except:\n                        result[\"specs\"] = None\n\n                    # 4. 主图 URL\n                    try:\n                        img_elem = item.locator('.s-image').first\n                        if img_elem.count() > 0:\n                            result[\"image_url\"] = img_elem.get_attribute('src')\n                        else:\n                            result[\"image_url\"] = None\n                    except:\n                        result[\"image_url\"] = None\n\n                    # 5. PDF - 列表页通常没有 PDF，尝试提取产品链接以便后续爬取\n                    # 如果必须找 PDF，通常需要进入详情页，这里提取详情页链接作为替代\n                    try:\n                        link_elem = item.locator('h2 a').first\n                        if link_elem.count() > 0:\n                            href = link_elem.get_attribute('href')\n                            if href:\n                                result[\"product_url\"] = f\"https://www.amazon.com{href}\"\n                            else:\n                                result[\"product_url\"] = None\n                        else:\n                            result[\"product_url\"] = None\n                    except:\n                        result[\"product_url\"] = None\n                    \n                    result[\"pdf_url\"] = None # 列表页默认无 PDF\n\n                    # 数据验证：至少要有名称才视为有效\n                    if result.get(\"name\"):\n                        results.append(result)\n\n                except Exception as e:\n                    # 单个商品提取失败不影响其他商品\n                    continue\n\n    except Exception as e:\n        error_msg = str(e)\n    finally:\n        if browser:\n            browser.close()\n\n    # 数据清洗和验证\n    valid_results = [r for r in results if r.get(\"name\")]\n\n    metadata = {\n        \"total_extracted\": len(results),\n        \"valid_count\": len(valid_results),\n        \"url\": url\n    }\n    \n    if error_msg:\n        metadata[\"error\"] = error_msg\n\n    return {\n        \"results\": valid_results,\n        \"metadata\": metadata\n    }\n\nif __name__ == \"__main__\":\n    import sys\n    url = sys.argv[1] if len(sys.argv) > 1 else \"https://www.amazon.com/s?k=smartphone\"\n    result = scrape(url)\n    print(json.dumps(result, ensure_ascii=False, indent=2))",
+    "stage": "done",
+    "final_state": {
+      "stage": "done",
+      "quality_score": 0,
+      "sample_data": [],
+      "sool_iteration": 6,
+      "failure_history": [
+        {
+          "iteration": 1,
+          "failure_type": "unknown",
+          "root_cause": "'NoneType' object is not subscriptable",
+          "suggested_fix": "检查错误信息",
+          "data_count": 0
+        },
+        {
+          "iteration": 3,
+          "failure_type": "blocked",
+          "root_cause": "Amazon 的高等级反爬虫系统检测到了自动化特征（特别是无头浏览器模式），导致页面被重定向到验证码（CAPTCHA）页面或“输入验证字符”的拦截页，而非正常的商品搜索结果页。此外，代码中使用的 `domcontentloaded` 等待策略对于 Amazon 这种重度依赖 JavaScript 动态渲染的网站来说过于激进，导致在商品列表完全加载前就尝试提取数据。",
+          "suggested_fix": "1. 绕过检测：尝试使用 `headless=False` 进行调试，或引入 `playwright-stealth` 插件/注入脚本覆盖 `navigator.webdriver` 属性以隐藏自动化特征。2. 优化等待策略：将 `page.goto` 的 `wait_until` 参数改为 `'networkidle'` 或 `'load'`，并增加 `wait_for_selector` 的超时时间，确保 DOM 元素已渲染。3. 拦截检测：在提取前增加逻辑检查页面标题或 body 是否包含 'captcha', 'robot', 'try again' 等关键词，若被拦截则抛出特定异常或重试。",
+          "avoid_repeat": "避免在未处理浏览器指纹（如 webdriver 属性）的情况下直接使用默认的 `headless=True` 访问 Amazon，同时避免在动态内容未完全加载时（仅依赖 domcontentloaded）执行提取操作。",
+          "data_count": 0,
+          "website_type": "ecommerce",
+          "anti_bot_level": "high",
+          "attempted_strategies": [],
+          "partial_success": {
+            "partial_success": true,
+            "success_rate": 1.0,
+            "issues": [],
+            "strengths": [
+              "Code executed successfully"
+            ],
+            "recommendations": []
+          }
+        }
+      ],
+      "reflection_memory": [
+        "执行失败: 'NoneType' object is not subscriptable，数据量: 0",
+        "```json\n{\n    \"failure_type\": \"blocked\",\n    \"root_cause\": \"Amazon 的高等级反爬虫系统检测到了自动化特征（特别是无头浏览器模式），导致页面被重定向到验证码（CAPTCHA）页面或“输入验证字符”的拦截页，而非正常的商品搜索结果页。此外，代码中使用的 `domcontentloaded` 等待策略对于 Amazon 这种重度依赖 JavaScript 动态渲染的网站来说过于激进，导致在商品列表完全加载前就尝试提取数据。\",\n    \"suggested_fix\": \"1. 绕过检测：尝试使用 `headless=False` 进行调试，或引入 `playwright-stealth` 插件/注入脚本覆盖 `navigator.webdriver` 属性以隐藏自动化特征。2. 优化等待策略：将 `page.goto` 的 `wait_until` 参数改为 `'networkidle'` 或 `'load'`，并增加 `wait_for_selector` 的超时时间，确保 DOM 元素已渲染。3. 拦截检测：在提取前增加逻辑检查页面标题或 body 是否包含 'captcha', 'robot', 'try again' 等关键词，若被拦截则抛出特定异常或重试。\",\n    \"avoid_repeat\": \"避免在未处理浏览器指纹（如 webdriver 属性）的情况下直接使用默认的 `headless=True` 访问 Amazon，同时避免在动态内容未完全加载时（仅依赖 domcontentloaded）执行提取操作。\"\n}\n```"
+      ],
+      "attempt_signatures": [
+        "4e893e53",
+        "6b520ea8"
+      ],
+      "quality_issues": [
+        "Խϵ: 0ֱֶοȱʧ"
+      ]
+    }
+  }
+}

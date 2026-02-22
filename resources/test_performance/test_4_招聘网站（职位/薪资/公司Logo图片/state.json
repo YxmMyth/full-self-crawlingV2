@@ -1,0 +1,138 @@
+{
+  "stage": "done",
+  "quality_score": 0,
+  "sample_data": [],
+  "sool_iteration": 6,
+  "failure_history": [
+    {
+      "iteration": 1,
+      "failure_type": "unknown",
+      "root_cause": "'NoneType' object is not subscriptable",
+      "suggested_fix": "检查错误信息",
+      "data_count": 0
+    },
+    {
+      "iteration": 2,
+      "failure_type": "unknown",
+      "root_cause": "Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429",
+      "suggested_fix": "检查错误信息",
+      "data_count": 0
+    },
+    {
+      "iteration": 3,
+      "failure_type": "unknown",
+      "root_cause": "Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429",
+      "suggested_fix": "检查错误信息",
+      "data_count": 0
+    },
+    {
+      "iteration": 6,
+      "failure_type": "selector_error",
+      "root_cause": "目标URL (https://www.indeed.com/hire/job-description/software-engineer) 属于Indeed的招聘方产品页面，用于展示职位描述模板或示例，而非标准的求职者搜索结果列表。代码中使用了针对求职者搜索列表的选择器 `.job_seen_beacon` 来判断页面类型并提取数据。由于该页面上不存在 `.job_seen_beacon` 元素，代码将其误判为非列表页（或未进入提取逻辑），且未包含针对这种特定 'Hire' 页面结构的提取分支，导致最终提取数据量为0。",
+      "suggested_fix": "1. 重新分析页面结构：针对 `/hire/` 路径下的页面，应识别为职位详情/模板页，而非搜索列表页。2. 调整选择器策略：对于此类页面，应使用更通用的JD提取逻辑，例如提取 `h1` 标签作为职位标题，查找包含 'jobDescription'、'description' 类名的 div 或 `#jobDescriptionText` 作为职位描述内容。3. 增加多态处理逻辑：在代码中增加 `else` 分支，专门处理非搜索列表页的情况，确保无论是搜索页还是详情页都能提取到数据。",
+      "avoid_repeat": "避免假设所有Indeed URL都具有相同的DOM结构（特别是搜索列表结构）。在编写爬虫前，必须确认目标URL的具体类型（列表页、详情页、或其他子域页面），并针对不同类型准备对应的CSS选择器或XPath，防止因页面类型判断失误而导致提取失败。",
+      "data_count": 0,
+      "website_type": "job_board",
+      "anti_bot_level": "high",
+      "attempted_strategies": [],
+      "partial_success": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      }
+    }
+  ],
+  "reflection_memory": [
+    "执行失败: 'NoneType' object is not subscriptable，数据量: 0",
+    "执行失败: Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429，数据量: 0",
+    "执行失败: Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429，数据量: 0",
+    "```json\n{\n    \"failure_type\": \"selector_error\",\n    \"root_cause\": \"目标URL (https://www.indeed.com/hire/job-description/software-engineer) 属于Indeed的招聘方产品页面，用于展示职位描述模板或示例，而非标准的求职者搜索结果列表。代码中使用了针对求职者搜索列表的选择器 `.job_seen_beacon` 来判断页面类型并提取数据。由于该页面上不存在 `.job_seen_beacon` 元素，代码将其误判为非列表页（或未进入提取逻辑），且未包含针对这种特定 'Hire' 页面结构的提取分支，导致最终提取数据量为0。\",\n    \"suggested_fix\": \"1. 重新分析页面结构：针对 `/hire/` 路径下的页面，应识别为职位详情/模板页，而非搜索列表页。2. 调整选择器策略：对于此类页面，应使用更通用的JD提取逻辑，例如提取 `h1` 标签作为职位标题，查找包含 'jobDescription'、'description' 类名的 div 或 `#jobDescriptionText` 作为职位描述内容。3. 增加多态处理逻辑：在代码中增加 `else` 分支，专门处理非搜索列表页的情况，确保无论是搜索页还是详情页都能提取到数据。\",\n    \"avoid_repeat\": \"避免假设所有Indeed URL都具有相同的DOM结构（特别是搜索列表结构）。在编写爬虫前，必须确认目标URL的具体类型（列表页、详情页、或其他子域页面），并针对不同类型准备对应的CSS选择器或XPath，防止因页面类型判断失误而导致提取失败。\"\n}\n```"
+  ],
+  "attempt_signatures": [
+    "1a7f2db4"
+  ],
+  "quality_issues": [
+    "Խϵ: 0ֱֶοȱʧ"
+  ],
+  "agent_result": {
+    "success": true,
+    "agent_id": "agent_60ffb4f7",
+    "site_url": "https://www.indeed.com/hire/job-description/software-engineer",
+    "user_goal": "招聘网站（职位/薪资/公司Logo图片/ JD HTML）",
+    "report": {
+      "site_url": "https://www.indeed.com/hire/job-description/software-engineer",
+      "user_goal": "招聘网站（职位/薪资/公司Logo图片/ JD HTML）",
+      "quality_score": 0,
+      "sample_data": [],
+      "generated_code": "from playwright.sync_api import sync_playwright\nimport json\nimport time\nimport random\n\nUSER_AGENTS = [\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36\",\n    \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36\",\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0\"\n]\n\ndef scrape(url: str) -> dict:\n    results = []\n    browser = None\n    error_msg = None\n    \n    try:\n        with sync_playwright() as p:\n            browser = p.chromium.launch(\n                headless=True,\n                args=[\"--disable-blink-features=AutomationControlled\", \"--no-sandbox\", \"--disable-web-security\"]\n            )\n            page = browser.new_page(\n                user_agent=random.choice(USER_AGENTS),\n                viewport={\"width\": 1920, \"height\": 1080}\n            )\n\n            page.goto(url, wait_until='domcontentloaded', timeout=30000)\n\n            # 等待关键元素\n            try:\n                page.wait_for_selector('body', timeout=10000)\n            except:\n                pass\n\n            # 人类行为延迟\n            time.sleep(random.uniform(1.5, 3.0))\n\n            # === 策略判断 ===\n            # 检查是否为搜索结果页 (列表页)\n            is_search_page = False\n            try:\n                if page.locator(\".job_seen_beacon\").count() > 0:\n                    is_search_page = True\n            except:\n                pass\n\n            # === 数据提取 ===\n            \n            if is_search_page:\n                # 模式1: 搜索结果列表页\n                items = page.locator(\".job_seen_beacon\").all()\n                for item in items:\n                    try:\n                        result = {}\n                        \n                        # 职位 Title\n                        try:\n                            title_sel = item.locator(\"h2.jobTitle span, h2.jobTitle\")\n                            if title_sel.count() > 0:\n                                result[\"title\"] = title_sel.first.inner_text().strip()\n                            else:\n                                result[\"title\"] = title_sel.inner_text().strip()\n                        except:\n                            result[\"title\"] = None\n\n                        # 公司 Company\n                        try:\n                            result[\"company\"] = item.locator(\"[data-testid='company-name']\").inner_text().strip()\n                        except:\n                            result[\"company\"] = None\n\n                        # 薪资 Salary\n                        try:\n                            result[\"salary\"] = item.locator(\".salary-snippet, [data-testid='job-salary']\").inner_text().strip()\n                        except:\n                            result[\"salary\"] = None\n\n                        # 公司 Logo\n                        try:\n                            logo_elem = item.locator(\"img.company-logo, img[src*='logo']\")\n                            if logo_elem.count() > 0:\n                                result[\"logo_url\"] = logo_elem.first.get_attribute(\"src\")\n                            else:\n                                result[\"logo_url\"] = None\n                        except:\n                            result[\"logo_url\"] = None\n                            \n                        # JD HTML (列表页通常只有片段，尝试获取)\n                        try:\n                            result[\"jd_html\"] = item.locator(\"table td div\").first.inner_html()\n                        except:\n                            result[\"jd_html\"] = None\n\n                        if result.get(\"title\"):\n                            results.append(result)\n                    except Exception as e:\n                        continue\n            else:\n                # 模式2: 单个职位详情页 或 Hire 模板页\n                result = {}\n                \n                # 职位 Title - 尝试多种常见选择器\n                title_selectors = [\"h1.jobsearch-JobInfoHeader-title\", \"h1\", \".job-title\", \"h2.jobTitle\"]\n                for sel in title_selectors:\n                    try:\n                        elem = page.locator(sel).first\n                        if elem.count() > 0 and elem.inner_text().strip():\n                            result[\"title\"] = elem.inner_text().strip()\n                            break\n                    except:\n                        continue\n                \n                # 公司 Company\n                try:\n                    comp = page.locator(\"[data-testid='company-name'], .jobsearch-CompanyInfoWithoutHeaderImage a\").first\n                    if comp.count() > 0:\n                        result[\"company\"] = comp.inner_text().strip()\n                except:\n                    result[\"company\"] = None\n\n                # 薪资 Salary\n                try:\n                    sal = page.locator(\"[data-testid='job-salary'], .jobsearch-JobMetadataHeader-item\").first\n                    if sal.count() > 0:\n                        result[\"salary\"] = sal.inner_text().strip()\n                except:\n                    result[\"salary\"] = None\n\n                # 职位描述 HTML (详情页特有)\n                try:\n                    jd_elem = page.locator(\"#jobDescriptionText, .jobsearch-jobDescriptionText, #description\").first\n                    if jd_elem.count() > 0:\n                        result[\"jd_html\"] = jd_elem.inner_html()\n                    else:\n                        result[\"jd_html\"] = None\n                except:\n                    result[\"jd_html\"] = None\n\n                if result.get(\"title\"):\n                    results.append(result)\n\n    except Exception as e:\n        error_msg = str(e)\n    finally:\n        if browser:\n            browser.close()\n\n    return {\n        \"results\": results,\n        \"metadata\": {\n            \"url\": url,\n            \"count\": len(results),\n            \"error\": error_msg\n        }\n    }"
+    },
+    "markdown_report": "```markdown\n# 网站数据侦察报告\n\n## 站点信息\n- URL: https://www.indeed.com/hire/job-description/software-engineer\n- 用户需求: 招聘网站（职位/薪资/公司Logo图片/ JD HTML）\n- 侦察时间: 2026-05-21\n\n## 侦察总结\n- 估算数据总量: 0 条 (目标页面非列表页)\n- 样本质量分数: 0/1.0\n- 数据结构化程度: 不适用 (页面类型不匹配)\n\n## 站点特征分析\n- 页面类型: 工具/模板页\n- 分页方式: 无\n- 反爬等级: 低 (静态资源页面)\n- 页面内容: 该页面为 Indeed 提供的“职位描述生成器/模板”工具，而非包含招聘信息的搜索结果列表页。\n\n## 真实样本预览\n```json\n[]\n```\n*(注：由于目标页面为工具页，未采集到任何职位列表样本)*\n\n## 可爬性评估\n- 反爬等级: 低 (针对当前 URL) / 高 (针对 Indeed 搜索列表页)\n- 技术难度: 简单 (当前页面) / 复杂 (若需获取招聘数据)\n- 推荐策略: \n  1. **URL 纠正**：当前 URL (`/hire/job-description/...`) 是供雇主撰写 JD 的工具页，不包含职位列表、薪资或 Logo 数据。\n  2. **更换目标地址**：若需爬取招聘信息（职位/薪资/Logo），请将目标 URL 更换为 Indeed 的搜索结果页，例如：`https://www.indeed.com/jobs?q=software+engineer&l=New+York`。\n  3. **Indeed 搜索页策略**：\n     - Indeed 搜索页主要依赖动态加载，需分析内部 API 接口或使用浏览器渲染方案。\n     - 具有较高的反爬策略（IP 风控、验证码），建议使用高质量住宅代理 IP 和请求指纹轮换。\n```",
+    "generated_code": "from playwright.sync_api import sync_playwright\nimport json\nimport time\nimport random\n\nUSER_AGENTS = [\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36\",\n    \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36\",\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0\"\n]\n\ndef scrape(url: str) -> dict:\n    results = []\n    browser = None\n    error_msg = None\n    \n    try:\n        with sync_playwright() as p:\n            browser = p.chromium.launch(\n                headless=True,\n                args=[\"--disable-blink-features=AutomationControlled\", \"--no-sandbox\", \"--disable-web-security\"]\n            )\n            page = browser.new_page(\n                user_agent=random.choice(USER_AGENTS),\n                viewport={\"width\": 1920, \"height\": 1080}\n            )\n\n            page.goto(url, wait_until='domcontentloaded', timeout=30000)\n\n            # 等待关键元素\n            try:\n                page.wait_for_selector('body', timeout=10000)\n            except:\n                pass\n\n            # 人类行为延迟\n            time.sleep(random.uniform(1.5, 3.0))\n\n            # === 策略判断 ===\n            # 检查是否为搜索结果页 (列表页)\n            is_search_page = False\n            try:\n                if page.locator(\".job_seen_beacon\").count() > 0:\n                    is_search_page = True\n            except:\n                pass\n\n            # === 数据提取 ===\n            \n            if is_search_page:\n                # 模式1: 搜索结果列表页\n                items = page.locator(\".job_seen_beacon\").all()\n                for item in items:\n                    try:\n                        result = {}\n                        \n                        # 职位 Title\n                        try:\n                            title_sel = item.locator(\"h2.jobTitle span, h2.jobTitle\")\n                            if title_sel.count() > 0:\n                                result[\"title\"] = title_sel.first.inner_text().strip()\n                            else:\n                                result[\"title\"] = title_sel.inner_text().strip()\n                        except:\n                            result[\"title\"] = None\n\n                        # 公司 Company\n                        try:\n                            result[\"company\"] = item.locator(\"[data-testid='company-name']\").inner_text().strip()\n                        except:\n                            result[\"company\"] = None\n\n                        # 薪资 Salary\n                        try:\n                            result[\"salary\"] = item.locator(\".salary-snippet, [data-testid='job-salary']\").inner_text().strip()\n                        except:\n                            result[\"salary\"] = None\n\n                        # 公司 Logo\n                        try:\n                            logo_elem = item.locator(\"img.company-logo, img[src*='logo']\")\n                            if logo_elem.count() > 0:\n                                result[\"logo_url\"] = logo_elem.first.get_attribute(\"src\")\n                            else:\n                                result[\"logo_url\"] = None\n                        except:\n                            result[\"logo_url\"] = None\n                            \n                        # JD HTML (列表页通常只有片段，尝试获取)\n                        try:\n                            result[\"jd_html\"] = item.locator(\"table td div\").first.inner_html()\n                        except:\n                            result[\"jd_html\"] = None\n\n                        if result.get(\"title\"):\n                            results.append(result)\n                    except Exception as e:\n                        continue\n            else:\n                # 模式2: 单个职位详情页 或 Hire 模板页\n                result = {}\n                \n                # 职位 Title - 尝试多种常见选择器\n                title_selectors = [\"h1.jobsearch-JobInfoHeader-title\", \"h1\", \".job-title\", \"h2.jobTitle\"]\n                for sel in title_selectors:\n                    try:\n                        elem = page.locator(sel).first\n                        if elem.count() > 0 and elem.inner_text().strip():\n                            result[\"title\"] = elem.inner_text().strip()\n                            break\n                    except:\n                        continue\n                \n                # 公司 Company\n                try:\n                    comp = page.locator(\"[data-testid='company-name'], .jobsearch-CompanyInfoWithoutHeaderImage a\").first\n                    if comp.count() > 0:\n                        result[\"company\"] = comp.inner_text().strip()\n                except:\n                    result[\"company\"] = None\n\n                # 薪资 Salary\n                try:\n                    sal = page.locator(\"[data-testid='job-salary'], .jobsearch-JobMetadataHeader-item\").first\n                    if sal.count() > 0:\n                        result[\"salary\"] = sal.inner_text().strip()\n                except:\n                    result[\"salary\"] = None\n\n                # 职位描述 HTML (详情页特有)\n                try:\n                    jd_elem = page.locator(\"#jobDescriptionText, .jobsearch-jobDescriptionText, #description\").first\n                    if jd_elem.count() > 0:\n                        result[\"jd_html\"] = jd_elem.inner_html()\n                    else:\n                        result[\"jd_html\"] = None\n                except:\n                    result[\"jd_html\"] = None\n\n                if result.get(\"title\"):\n                    results.append(result)\n\n    except Exception as e:\n        error_msg = str(e)\n    finally:\n        if browser:\n            browser.close()\n\n    return {\n        \"results\": results,\n        \"metadata\": {\n            \"url\": url,\n            \"count\": len(results),\n            \"error\": error_msg\n        }\n    }",
+    "stage": "done",
+    "final_state": {
+      "stage": "done",
+      "quality_score": 0,
+      "sample_data": [],
+      "sool_iteration": 6,
+      "failure_history": [
+        {
+          "iteration": 1,
+          "failure_type": "unknown",
+          "root_cause": "'NoneType' object is not subscriptable",
+          "suggested_fix": "检查错误信息",
+          "data_count": 0
+        },
+        {
+          "iteration": 2,
+          "failure_type": "unknown",
+          "root_cause": "Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429",
+          "suggested_fix": "检查错误信息",
+          "data_count": 0
+        },
+        {
+          "iteration": 3,
+          "failure_type": "unknown",
+          "root_cause": "Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429",
+          "suggested_fix": "检查错误信息",
+          "data_count": 0
+        },
+        {
+          "iteration": 6,
+          "failure_type": "selector_error",
+          "root_cause": "目标URL (https://www.indeed.com/hire/job-description/software-engineer) 属于Indeed的招聘方产品页面，用于展示职位描述模板或示例，而非标准的求职者搜索结果列表。代码中使用了针对求职者搜索列表的选择器 `.job_seen_beacon` 来判断页面类型并提取数据。由于该页面上不存在 `.job_seen_beacon` 元素，代码将其误判为非列表页（或未进入提取逻辑），且未包含针对这种特定 'Hire' 页面结构的提取分支，导致最终提取数据量为0。",
+          "suggested_fix": "1. 重新分析页面结构：针对 `/hire/` 路径下的页面，应识别为职位详情/模板页，而非搜索列表页。2. 调整选择器策略：对于此类页面，应使用更通用的JD提取逻辑，例如提取 `h1` 标签作为职位标题，查找包含 'jobDescription'、'description' 类名的 div 或 `#jobDescriptionText` 作为职位描述内容。3. 增加多态处理逻辑：在代码中增加 `else` 分支，专门处理非搜索列表页的情况，确保无论是搜索页还是详情页都能提取到数据。",
+          "avoid_repeat": "避免假设所有Indeed URL都具有相同的DOM结构（特别是搜索列表结构）。在编写爬虫前，必须确认目标URL的具体类型（列表页、详情页、或其他子域页面），并针对不同类型准备对应的CSS选择器或XPath，防止因页面类型判断失误而导致提取失败。",
+          "data_count": 0,
+          "website_type": "job_board",
+          "anti_bot_level": "high",
+          "attempted_strategies": [],
+          "partial_success": {
+            "partial_success": true,
+            "success_rate": 1.0,
+            "issues": [],
+            "strengths": [
+              "Code executed successfully"
+            ],
+            "recommendations": []
+          }
+        }
+      ],
+      "reflection_memory": [
+        "执行失败: 'NoneType' object is not subscriptable，数据量: 0",
+        "执行失败: Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429，数据量: 0",
+        "执行失败: Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429，数据量: 0",
+        "```json\n{\n    \"failure_type\": \"selector_error\",\n    \"root_cause\": \"目标URL (https://www.indeed.com/hire/job-description/software-engineer) 属于Indeed的招聘方产品页面，用于展示职位描述模板或示例，而非标准的求职者搜索结果列表。代码中使用了针对求职者搜索列表的选择器 `.job_seen_beacon` 来判断页面类型并提取数据。由于该页面上不存在 `.job_seen_beacon` 元素，代码将其误判为非列表页（或未进入提取逻辑），且未包含针对这种特定 'Hire' 页面结构的提取分支，导致最终提取数据量为0。\",\n    \"suggested_fix\": \"1. 重新分析页面结构：针对 `/hire/` 路径下的页面，应识别为职位详情/模板页，而非搜索列表页。2. 调整选择器策略：对于此类页面，应使用更通用的JD提取逻辑，例如提取 `h1` 标签作为职位标题，查找包含 'jobDescription'、'description' 类名的 div 或 `#jobDescriptionText` 作为职位描述内容。3. 增加多态处理逻辑：在代码中增加 `else` 分支，专门处理非搜索列表页的情况，确保无论是搜索页还是详情页都能提取到数据。\",\n    \"avoid_repeat\": \"避免假设所有Indeed URL都具有相同的DOM结构（特别是搜索列表结构）。在编写爬虫前，必须确认目标URL的具体类型（列表页、详情页、或其他子域页面），并针对不同类型准备对应的CSS选择器或XPath，防止因页面类型判断失误而导致提取失败。\"\n}\n```"
+      ],
+      "attempt_signatures": [
+        "1a7f2db4"
+      ],
+      "quality_issues": [
+        "Խϵ: 0ֱֶοȱʧ"
+      ]
+    }
+  }
+}

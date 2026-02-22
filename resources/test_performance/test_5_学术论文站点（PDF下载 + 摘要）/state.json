@@ -1,0 +1,82 @@
+{
+  "stage": "done",
+  "quality_score": 0.0,
+  "sample_data": [],
+  "sool_iteration": 6,
+  "failure_history": [
+    {
+      "iteration": 1,
+      "failure_type": "unknown",
+      "root_cause": "'NoneType' object is not subscriptable",
+      "suggested_fix": "检查错误信息",
+      "data_count": 0
+    },
+    {
+      "iteration": 3,
+      "failure_type": "unknown",
+      "root_cause": "",
+      "suggested_fix": "检查错误信息",
+      "data_count": 0
+    }
+  ],
+  "reflection_memory": [
+    "执行失败: 'NoneType' object is not subscriptable，数据量: 0",
+    "执行失败: ，数据量: 0"
+  ],
+  "attempt_signatures": [
+    "eba7a93a",
+    "b815ef2b"
+  ],
+  "quality_issues": [
+    "评估异常: Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+  ],
+  "agent_result": {
+    "success": true,
+    "agent_id": "agent_9270e755",
+    "site_url": "https://arxiv.org/list/cs/recent",
+    "user_goal": "学术论文站点（PDF下载 + 摘要）",
+    "report": {
+      "site_url": "https://arxiv.org/list/cs/recent?show=2500",
+      "user_goal": "学术论文站点（PDF下载 + 摘要）",
+      "quality_score": 0.0,
+      "sample_data": [],
+      "generated_code": "from playwright.sync_api import sync_playwright\nimport json\nimport time\nimport random\nimport re\n\n# 模拟常见的User-Agent\nUSER_AGENTS = [\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36\",\n    \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36\",\n    \"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36\",\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0\"\n]\n\ndef clean_text(text):\n    if not text:\n        return \"\"\n    return re.sub(r'\\s+', ' ', text).strip()\n\ndef scrape(url: str) -> dict:\n    results = []\n    browser = None\n    try:\n        with sync_playwright() as p:\n            browser = p.chromium.launch(\n                headless=True,\n                args=[\"--disable-blink-features=AutomationControlled\", \"--no-sandbox\"]\n            )\n            page = browser.new_page(\n                user_agent=random.choice(USER_AGENTS),\n                viewport={\"width\": 1920, \"height\": 1080}\n            )\n\n            page.goto(url, wait_until='networkidle', timeout=60000)\n\n            # 等待关键容器加载\n            try:\n                page.wait_for_selector('dl#articles', timeout=15000)\n            except Exception as e:\n                print(f\"Timeout waiting for articles container: {e}\")\n                # 尝试继续，可能页面结构不同\n\n            # 人类行为延迟\n            time.sleep(random.uniform(1.5, 3.0))\n\n            # === 数据提取 ===\n            # ArXiv 结构分析：主要内容在 dl#articles 中，由 dt (标题/元数据) 和 dd (摘要) 组成\n            \n            # 获取所有的 dt (定义标题)\n            dts = page.locator(\"dl#articles > dt\").all()\n            # 获取所有的 dd (定义摘要)\n            dds = page.locator(\"dl#articles > dd\").all()\n            \n            print(f\"Found {len(dts)} dt elements and {len(dds)} dd elements.\")\n\n            # 遍历 dt 元素\n            for i, dt in enumerate(dts):\n                try:\n                    item_data = {}\n                    \n                    # 1. 提取标题\n                    # 尝试标准选择器 .list-title\n                    title_elem = dt.locator(\".list-title\")\n                    if title_elem.count() > 0:\n                        item_data[\"title\"] = clean_text(title_elem.text_content())\n                    else:\n                        # 备选方案：获取 dt 内的所有文本，并尝试清理\n                        full_text = clean_text(dt.inner_text())\n                        # 简单的启发式方法：标题通常包含 \"Title:\" 或者是主要的长文本\n                        # 这里我们暂时存储原始文本，后续清洗\n                        item_data[\"title\"] = full_text\n\n                    # 2. 提取 ID 和 链接\n                    # 通常在 span.list-identifier 或 a 标签中\n                    link_elem = dt.locator(\"a[href*='/abs/']\").first\n                    if link_elem.count() > 0:\n                        item_data[\"link\"] = \"https://arxiv.org\" + link_elem.get_attribute(\"href\")\n                        # 从链接或文本中提取 ID\n                        id_text = clean_text(link_elem.text_content())\n                        item_data[\"id\"] = id_text\n                    else:\n                        # 备选：查找任何包含 arXiv ID 格式的链接\n                        all_links = dt.locator(\"a\").all()\n                        for a in all_links:\n                            href = a.get_attribute(\"href\") or \"\"\n                            if \"/abs/\" in href or \"/pdf/\" in href:\n                                item_data[\"link\"] = \"https://arxiv.org\" + href\n                                break\n\n                    # 3. 提取 PDF 链接\n                    # PDF 链接通常在 dd 中，或者 dt 的 identifier 部分\n                    # 优先在 dd 中查找\n                    pdf_url = \"\"\n                    if i < len(dds):\n                        dd = dds[i]\n                        pdf_elem = dd.locator(\"a[href*='/pdf/']\").first\n                        if pdf_elem.count() > 0:\n                            pdf_url = \"https://arxiv.org\" + pdf_elem.get_attribute(\"href\")\n                        else:\n                            # 备选：在 dt 中查找\n                            pdf_elem_dt = dt.locator(\"a[href*='/pdf/']\").first\n                            if pdf_elem_dt.count() > 0:\n                                pdf_url = \"https://arxiv.org\" + pdf_elem_dt.get_attribute(\"href\")\n                    \n                    item_data[\"pdf_url\"] = pdf_url\n\n                    # 4. 提取摘要\n                    # 摘要在对应的 dd 中\n                    if i < len(dds):\n                        dd = dds[i]\n                        abs_elem = dd.locator(\".list-abstract\")\n                        if abs_elem.count() > 0:\n                            # 移除 \"Abstract:\" 前缀\n                            abstract_text = clean_text(abs_elem.text_content())\n                            if abstract_text.startswith(\"Abstract:\"):\n                                abstract_text = abstract_text[9:].strip()\n                            item_data[\"abstract\"] = abstract_text\n                        else:\n                            # 备选：尝试获取 dd 的文本\n                            item_data[\"abstract\"] = clean_text(dd.inner_text())\n\n                    # 数据验证：必须有标题或ID\n                    if item_data.get(\"title\") or item_data.get(\"id\"):\n                        results.append(item_data)\n\n                except Exception as e:\n                    print(f\"Error processing item {i}: {e}\")\n                    continue\n\n    except Exception as e:\n        print(f\"Critical scraping error: {e}\")\n    finally:\n        if browser:\n            browser.close()\n\n    # 数据清洗和验证\n    valid_results = []\n    for r in results:\n        # 进一步清洗标题，移除 \"Title:\" 前缀\n        if \"title\" in r and r[\"title\"].startswith(\"Title:\"):\n            r[\"title\"] = r[\"title\"][6:].strip()\n        \n        # 确保关键字段存在\n        if r.get(\"title\") or r.get(\"abstract\"):\n            valid_results.append(r)\n\n    return {\n        \"results\": valid_results,\n        \"metadata\": {\n            \"total_extracted\": len(results),\n            \"valid_count\": len(valid_results),\n            \"url\": url\n        }\n    }\n\nif __name__ == \"__main__\":\n    import sys\n    url = sys.argv[1] if len(sys.argv) > 1 else \"https://arxiv.org/list/cs/recent?show=2500\"\n    result = scrape(url)\n    print(json.dumps(result, ensure_ascii=False, indent=2))"
+    },
+    "markdown_report": "# 网站数据侦察报告\n\n## 站点信息\n- URL: https://arxiv.org/list/cs/recent?show=2500\n- 用户需求: 学术论文站点（PDF下载 + 摘要）\n\n## 侦察总结\n- SOOAL 迭代: 6\n- 质量分数: 0.0\n- 样本数量: 0\n",
+    "generated_code": "from playwright.sync_api import sync_playwright\nimport json\nimport time\nimport random\nimport re\n\n# 模拟常见的User-Agent\nUSER_AGENTS = [\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36\",\n    \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36\",\n    \"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36\",\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0\"\n]\n\ndef clean_text(text):\n    if not text:\n        return \"\"\n    return re.sub(r'\\s+', ' ', text).strip()\n\ndef scrape(url: str) -> dict:\n    results = []\n    browser = None\n    try:\n        with sync_playwright() as p:\n            browser = p.chromium.launch(\n                headless=True,\n                args=[\"--disable-blink-features=AutomationControlled\", \"--no-sandbox\"]\n            )\n            page = browser.new_page(\n                user_agent=random.choice(USER_AGENTS),\n                viewport={\"width\": 1920, \"height\": 1080}\n            )\n\n            page.goto(url, wait_until='networkidle', timeout=60000)\n\n            # 等待关键容器加载\n            try:\n                page.wait_for_selector('dl#articles', timeout=15000)\n            except Exception as e:\n                print(f\"Timeout waiting for articles container: {e}\")\n                # 尝试继续，可能页面结构不同\n\n            # 人类行为延迟\n            time.sleep(random.uniform(1.5, 3.0))\n\n            # === 数据提取 ===\n            # ArXiv 结构分析：主要内容在 dl#articles 中，由 dt (标题/元数据) 和 dd (摘要) 组成\n            \n            # 获取所有的 dt (定义标题)\n            dts = page.locator(\"dl#articles > dt\").all()\n            # 获取所有的 dd (定义摘要)\n            dds = page.locator(\"dl#articles > dd\").all()\n            \n            print(f\"Found {len(dts)} dt elements and {len(dds)} dd elements.\")\n\n            # 遍历 dt 元素\n            for i, dt in enumerate(dts):\n                try:\n                    item_data = {}\n                    \n                    # 1. 提取标题\n                    # 尝试标准选择器 .list-title\n                    title_elem = dt.locator(\".list-title\")\n                    if title_elem.count() > 0:\n                        item_data[\"title\"] = clean_text(title_elem.text_content())\n                    else:\n                        # 备选方案：获取 dt 内的所有文本，并尝试清理\n                        full_text = clean_text(dt.inner_text())\n                        # 简单的启发式方法：标题通常包含 \"Title:\" 或者是主要的长文本\n                        # 这里我们暂时存储原始文本，后续清洗\n                        item_data[\"title\"] = full_text\n\n                    # 2. 提取 ID 和 链接\n                    # 通常在 span.list-identifier 或 a 标签中\n                    link_elem = dt.locator(\"a[href*='/abs/']\").first\n                    if link_elem.count() > 0:\n                        item_data[\"link\"] = \"https://arxiv.org\" + link_elem.get_attribute(\"href\")\n                        # 从链接或文本中提取 ID\n                        id_text = clean_text(link_elem.text_content())\n                        item_data[\"id\"] = id_text\n                    else:\n                        # 备选：查找任何包含 arXiv ID 格式的链接\n                        all_links = dt.locator(\"a\").all()\n                        for a in all_links:\n                            href = a.get_attribute(\"href\") or \"\"\n                            if \"/abs/\" in href or \"/pdf/\" in href:\n                                item_data[\"link\"] = \"https://arxiv.org\" + href\n                                break\n\n                    # 3. 提取 PDF 链接\n                    # PDF 链接通常在 dd 中，或者 dt 的 identifier 部分\n                    # 优先在 dd 中查找\n                    pdf_url = \"\"\n                    if i < len(dds):\n                        dd = dds[i]\n                        pdf_elem = dd.locator(\"a[href*='/pdf/']\").first\n                        if pdf_elem.count() > 0:\n                            pdf_url = \"https://arxiv.org\" + pdf_elem.get_attribute(\"href\")\n                        else:\n                            # 备选：在 dt 中查找\n                            pdf_elem_dt = dt.locator(\"a[href*='/pdf/']\").first\n                            if pdf_elem_dt.count() > 0:\n                                pdf_url = \"https://arxiv.org\" + pdf_elem_dt.get_attribute(\"href\")\n                    \n                    item_data[\"pdf_url\"] = pdf_url\n\n                    # 4. 提取摘要\n                    # 摘要在对应的 dd 中\n                    if i < len(dds):\n                        dd = dds[i]\n                        abs_elem = dd.locator(\".list-abstract\")\n                        if abs_elem.count() > 0:\n                            # 移除 \"Abstract:\" 前缀\n                            abstract_text = clean_text(abs_elem.text_content())\n                            if abstract_text.startswith(\"Abstract:\"):\n                                abstract_text = abstract_text[9:].strip()\n                            item_data[\"abstract\"] = abstract_text\n                        else:\n                            # 备选：尝试获取 dd 的文本\n                            item_data[\"abstract\"] = clean_text(dd.inner_text())\n\n                    # 数据验证：必须有标题或ID\n                    if item_data.get(\"title\") or item_data.get(\"id\"):\n                        results.append(item_data)\n\n                except Exception as e:\n                    print(f\"Error processing item {i}: {e}\")\n                    continue\n\n    except Exception as e:\n        print(f\"Critical scraping error: {e}\")\n    finally:\n        if browser:\n            browser.close()\n\n    # 数据清洗和验证\n    valid_results = []\n    for r in results:\n        # 进一步清洗标题，移除 \"Title:\" 前缀\n        if \"title\" in r and r[\"title\"].startswith(\"Title:\"):\n            r[\"title\"] = r[\"title\"][6:].strip()\n        \n        # 确保关键字段存在\n        if r.get(\"title\") or r.get(\"abstract\"):\n            valid_results.append(r)\n\n    return {\n        \"results\": valid_results,\n        \"metadata\": {\n            \"total_extracted\": len(results),\n            \"valid_count\": len(valid_results),\n            \"url\": url\n        }\n    }\n\nif __name__ == \"__main__\":\n    import sys\n    url = sys.argv[1] if len(sys.argv) > 1 else \"https://arxiv.org/list/cs/recent?show=2500\"\n    result = scrape(url)\n    print(json.dumps(result, ensure_ascii=False, indent=2))",
+    "stage": "done",
+    "final_state": {
+      "stage": "done",
+      "quality_score": 0.0,
+      "sample_data": [],
+      "sool_iteration": 6,
+      "failure_history": [
+        {
+          "iteration": 1,
+          "failure_type": "unknown",
+          "root_cause": "'NoneType' object is not subscriptable",
+          "suggested_fix": "检查错误信息",
+          "data_count": 0
+        },
+        {
+          "iteration": 3,
+          "failure_type": "unknown",
+          "root_cause": "",
+          "suggested_fix": "检查错误信息",
+          "data_count": 0
+        }
+      ],
+      "reflection_memory": [
+        "执行失败: 'NoneType' object is not subscriptable，数据量: 0",
+        "执行失败: ，数据量: 0"
+      ],
+      "attempt_signatures": [
+        "eba7a93a",
+        "b815ef2b"
+      ],
+      "quality_issues": [
+        "评估异常: Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+      ]
+    }
+  }
+}
