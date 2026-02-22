@@ -45,6 +45,50 @@ def get_validation_config() -> Dict[str, bool]:
     }
 
 
+def get_deep_validation_config() -> Dict[str, Any]:
+    """
+    获取深度验证配置
+
+    返回从环境变量读取的深度验证配置。
+    深度验证会在沙箱中下载和验证实际内容（图片、PDF、视频）。
+
+    Returns:
+        配置字典，包含：
+        - enabled: 是否启用深度验证
+        - max_images: 最多验证的图片数量
+        - min_image_resolution: 最小图片分辨率要求
+        - pdf_validation_enabled: 是否验证 PDF
+        - clip_relevance_threshold: CLIP 相关性阈值
+    """
+    min_resolution = os.getenv("MIN_IMAGE_RESOLUTION", "1920x1080")
+
+    return {
+        "enabled": os.getenv("ENABLE_DEEP_VALIDATION", "false").lower() == "true",
+        "max_images": int(os.getenv("MAX_IMAGES_TO_VALIDATE", "3")),
+        "min_image_resolution": min_resolution,
+        "min_image_width": int(min_resolution.split("x")[0]) if "x" in min_resolution else 1920,
+        "min_image_height": int(min_resolution.split("x")[1]) if "x" in min_resolution else 1080,
+        "pdf_validation_enabled": os.getenv("PDF_VALIDATION_ENABLED", "true").lower() == "true",
+        "clip_relevance_threshold": float(os.getenv("CLIP_RELEVANCE_THRESHOLD", "0.3")),
+        "video_validation_enabled": os.getenv("VIDEO_VALIDATION_ENABLED", "false").lower() == "true",
+    }
+
+
+def get_vision_api_config() -> Dict[str, Any]:
+    """
+    获取 Vision API 配置（预留）
+
+    Returns:
+        配置字典
+    """
+    return {
+        "provider": os.getenv("VISION_API_PROVIDER", "none"),  # none | openai | aliyun | tencent
+        "enabled": os.getenv("ENABLE_VISION_API", "false").lower() == "true",
+        "model": os.getenv("VISION_MODEL", "gpt-4o"),
+        "api_key": os.getenv("OPENAI_API_KEY", ""),
+    }
+
+
 class ReconState(TypedDict):
     """侦察任务状态
 

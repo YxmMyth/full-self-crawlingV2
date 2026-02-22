@@ -1,6 +1,6 @@
 # Full-Self-Crawling - Hybrid Recon Agent
 
-**Version**: v3.2.0 (Enhanced Quality Validation)
+**Version**: v3.3.0 (Deep Validation + Code Snippet Support)
 **Date**: 2026-02-22
 **Scope**: Single-site reconnaissance agent with code generation
 
@@ -1772,17 +1772,354 @@ recon_graph = graph.compile()
 
 ---
 
-**Document Version**: 3.2.0
+## 13. 深度验证机制（Deep Validation）
+
+### 13.1 概述
+
+深度验证是 Verify 节点的增强功能，用于验证那些**不可完整审查**的二进制内容：
+- **图片**: 下载并检查分辨率、格式、大小
+- **PDF**: 检查页数、内容提取、加密状态
+- **视频**: 验证可访问性和内容类型
+- **代码片段**: SVG/HTML 语法和安全验证
+
+### 13.2 验证架构
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    深度验证流程                                 │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  基础验证完成                                                    │
+│    │                                                           │
+│    ▼                                                           │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │    检测数据类型                                         │   │
+│  │  - 图片字段？                                          │   │
+│  │  - PDF 字段？                                          │   │
+│  │  - 视频字段？                                          │   │
+│  │  - 代码片段字段？                                      │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│    │                                                           │
+│    ▼                                                           │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │    LLM 生成验证代码                                     │   │
+│  │  - 图片：PIL 下载 + 分辨率检查                          │   │
+│  │  - PDF：PyPDF2 页数 + 内容验证                          │   │
+│  │  - 代码：BeautifulSoup 语法 + 安全检查                  │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│    │                                                           │
+│    ▼                                                           │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │    沙箱执行验证代码                                     │   │
+│  │  - 下载实际内容                                         │   │
+│  │  - 解析并验证                                          │   │
+│  │  - 返回详细结果                                         │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│    │                                                           │
+│    ▼                                                           │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │    调整质量分数                                         │   │
+│  │  - 严重问题扣分                                          │   │
+│  │  - 记录详细统计                                         │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 13.3 图片深度验证
+
+**功能**：
+- 下载图片并检查分辨率
+- 检测占位图和缩略图
+- 验证格式和文件大小
+
+**代码模板**：
+```python
+import requests
+from PIL import Image
+from io import BytesIO
+
+def validate_image(url: str) -> dict:
+    """深度验证单张图片"""
+    try:
+        headers = {"User-Agent": "Mozilla/5.0"}
+        response = requests.get(url, timeout=10, headers=headers)
+        img = Image.open(BytesIO(response.content))
+
+        return {
+            "url": url,
+            "valid": True,
+            "width": img.width,
+            "height": img.height,
+            "format": img.format,
+            "is_high_res": img.width >= 1920 and img.height >= 1080,
+            "is_placeholder": any(kw in url.lower() for kw in ['placeholder', 'default']),
+            "is_thumbnail": img.width < 300 or img.height < 300
+        }
+    except Exception as e:
+        return {"url": url, "valid": False, "error": str(e)}
+```
+
+### 13.4 PDF 深度验证
+
+**功能**：
+- 下载 PDF 并检查页数
+- 提取首页文本判断内容
+- 检测加密状态
+
+**代码模板**：
+```python
+import requests
+import PyPDF2
+from io import BytesIO
+
+def validate_pdf(url: str) -> dict:
+    """深度验证单个 PDF"""
+    try:
+        headers = {"User-Agent": "Mozilla/5.0"}
+        response = requests.get(url, timeout=15, headers=headers)
+        pdf_reader = PyPDF2.PdfReader(BytesIO(response.content))
+
+        first_page_text = ""
+        if len(pdf_reader.pages) > 0:
+            first_page_text = pdf_reader.pages[0].extract_text() or ""
+
+        return {
+            "url": url,
+            "valid": True,
+            "pages": len(pdf_reader.pages),
+            "has_content": len(first_page_text.strip()) > 50,
+            "is_encrypted": pdf_reader.is_encrypted,
+            "preview_text": first_page_text[:200]
+        }
+    except Exception as e:
+        return {"url": url, "valid": False, "error": str(e)}
+```
+
+### 13.5 代码片段验证（SVG/HTML）
+
+**痛点**：
+1. 获取难度高：JS 动态生成的内容（React/Vue 画的图表、图标）
+2. 质量校验难：LLM 看不懂"是不是合法 SVG/无恶意 script/可渲染"
+
+**解决方案**：
+
+#### 获取阶段（Act 节点）
+使用 Playwright 的 `inner_html()` 提取动态内容：
+
+```python
+from playwright.sync_api import sync_playwright
+
+def scrape(url: str) -> dict:
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.goto(url, wait_until="networkidle")
+
+        # 等待动态 SVG 加载
+        page.wait_for_selector("svg", timeout=15000)
+
+        # 提取 SVG 代码
+        svgs = page.locator("svg").all()
+        results = []
+        for svg in svgs[:5]:  # 限量采样
+            svg_code = svg.evaluate("el => el.outerHTML")
+            results.append({"svg_code": svg_code})
+
+        # 提取 HTML 片段
+        html_blocks = page.locator(".rich-text, [data-component]").all()
+        for block in html_blocks:
+            html_snippet = block.inner_html()
+            results.append({"html_snippet": html_snippet})
+
+        return {"results": results}
+```
+
+#### 验证阶段（Verify 节点）
+三层验证：语法解析 + 安全检查 + LLM 语义打分
+
+```python
+import warnings
+from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
+
+warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
+
+def validate_svg_html_field(field_value: str, field_name: str) -> dict:
+    """验证 SVG 或 HTML 代码片段"""
+    result = {
+        "field": field_name,
+        "valid": False,
+        "score": 0.0,
+        "issues": [],
+        "is_svg": False,
+        "is_html": False,
+        "has_malicious_tags": False,
+        "structure_valid": False
+    }
+
+    try:
+        value_stripped = field_value.strip()
+
+        # SVG 验证
+        if value_stripped.startswith("<svg") or "<svg" in value_stripped[:200].lower():
+            result["is_svg"] = True
+
+            soup = BeautifulSoup(field_value, "xml")
+            svg_root = soup.find("svg")
+
+            if svg_root is None:
+                result["issues"].append("缺少<svg>根标签")
+            else:
+                result["structure_valid"] = True
+                result["valid"] = True
+
+                # 检查尺寸属性
+                has_width = svg_root.get("width") is not None
+                has_height = svg_root.get("height") is not None
+                has_viewbox = svg_root.get("viewBox") is not None
+
+                if not any([has_width, has_height, has_viewbox]):
+                    result["issues"].append("SVG缺少尺寸属性")
+
+                result["score"] = 9.0 if result["structure_valid"] and len(result["issues"]) == 0 else 6.0
+
+        # HTML 片段验证
+        elif value_stripped.startswith("<") and any(tag in value_stripped[:100] for tag in ["<div", "<span", "<p"]):
+            result["is_html"] = True
+
+            soup = BeautifulSoup(field_value, "html.parser")
+            tags = soup.find_all()
+
+            if len(tags) == 0:
+                result["issues"].append("不是有效HTML片段")
+            else:
+                result["structure_valid"] = True
+                result["valid"] = True
+
+                # 安全检查（防XSS）
+                dangerous_tags = ["script", "iframe", "object", "embed"]
+                found_dangerous = [tag.name for tag in tags if tag.name in dangerous_tags]
+
+                if found_dangerous:
+                    result["has_malicious_tags"] = True
+                    result["issues"].append(f"包含潜在恶意标签: {', '.join(found_dangerous)}")
+                    result["valid"] = False
+                    result["score"] = 2.0
+                else:
+                    text_content = soup.get_text(strip=True)
+                    result["score"] = 8.5 if len(text_content) > 20 else 5.0
+
+    except Exception as e:
+        result["issues"].append(f"验证失败: {str(e)[:100]}")
+
+    return result
+```
+
+### 13.6 配置选项
+
+```bash
+# .env 配置
+
+# 启用深度验证
+ENABLE_DEEP_VALIDATION=false          # 默认关闭（增加耗时）
+MAX_IMAGES_TO_VALIDATE=3              # 最多验证的图片数量
+MIN_IMAGE_RESOLUTION=1920x1080        # 最小图片分辨率
+PDF_VALIDATION_ENABLED=true            # 验证 PDF
+VIDEO_VALIDATION_ENABLED=false         # 验证视频
+CLIP_RELEVANCE_THRESHOLD=0.3          # CLIP 相关性阈值
+```
+
+### 13.7 Vision API 集成（预留）
+
+支持外部 Vision API 进行图片内容分析：
+- OpenAI Vision API (gpt-4o)
+- 阿里云视觉智能
+- 腾讯云图像分析
+
+```bash
+# Vision API 配置（预留）
+VISION_API_PROVIDER=none              # none | openai | aliyun
+ENABLE_VISION_API=false
+VISION_MODEL=gpt-4o
+OPENAI_API_KEY=
+```
+
+---
+
+## 14. Deployment
+
+### 14.1 Dockerfile
+
+```dockerfile
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# 安装依赖
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 安装 Playwright 浏览器
+RUN playwright install --with-deps chromium
+
+# 复制代码
+COPY . .
+
+# 暴露端口（如需 API 服务）
+EXPOSE 8000
+
+# 默认命令
+CMD ["python", "-m", "agent.main"]
+```
+
+### 14.2 requirements.txt
+
+```
+# 核心框架
+langgraph>=0.2.0
+langchain>=0.3.0
+
+# 浏览器自动化
+playwright>=1.40.0
+
+# HTTP 客户端
+httpx>=0.27.0
+
+# HTML 解析
+beautifulsoup4>=4.12.0
+lxml>=5.0.0
+
+# 深度验证依赖
+Pillow>=10.0.0          # 图片处理
+PyPDF2>=3.0.0           # PDF 处理
+pdfplumber>=0.10.0      # PDF 文本提取
+cairosvg>=2.7.0         # SVG 渲染验证
+requests>=2.31.0        # 网络请求
+
+# 向量数据库（记忆库）
+chromadb>=0.5.0
+
+# LLM 客户端
+anthropic>=0.40.0
+# 或 openai>=1.0.0
+
+# 工具
+firecrawl-py>=0.1.0
+```
+
+---
+
+**Document Version**: 3.3.0
 **Last Updated**: 2026-02-22
 **Key Changes**:
-- 新增质量评估与验证机制独立章节
-- 可配置的质量阈值（QUALITY_THRESHOLD）
-- 改进的降级策略：实际检查数据内容而非仅计数
-- 图片/格式/内容多维度验证
-- 自动从用户需求提取验证规则
-- 新增 quality_stats 详细统计输出
+- 新增深度验证机制（图片、PDF、视频）
+- 新增 SVG/HTML 代码片段验证（语法+安全检查）
+- Act 节点支持动态内容提取（Playwright innerHTML）
+- 新增 Vision API 预留接口
+- 可配置的深度验证选项
 
 **Changelog**:
+- v3.3.0: 深度验证 + 代码片段验证，支持 SVG/HTML 提取和验证
 - v3.2.0: 增强质量验证机制，修复降级策略缺陷
 - v3.1.0: 完善文档结构，添加协议和案例
 - v3.0.0: Hybrid 架构，LangGraph 状态机，代码生成+沙箱执行

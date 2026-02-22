@@ -18,6 +18,393 @@ import json
 # 验证代码模板
 # ============================================================================
 
+# ----------------------------------------------------------------------------
+# 深度验证模板（沙箱代码执行）
+# ----------------------------------------------------------------------------
+
+IMAGE_DEEP_VALIDATION_TEMPLATE = """
+import requests
+from PIL import Image
+from io import BytesIO
+import json
+
+def validate_image_deep(url: str, user_goal: str) -> dict:
+    '''深度验证图片：下载并检查分辨率、格式、大小'''
+    result = {{"url": url, "valid": True}}
+
+    try:
+        # 下载图片
+        headers = {{"User-Agent": "Mozilla/5.0"}}
+        response = requests.get(url, timeout=10, headers=headers)
+        response.raise_for_status()
+
+        # PIL 验证
+        img = Image.open(BytesIO(response.content))
+
+        result.update({{
+            "format": img.format,
+            "size": img.size,
+            "width": img.width,
+            "height": img.height,
+            "mode": img.mode,
+            "file_size_bytes": len(response.content),
+            "is_high_res": img.width >= 1920 and img.height >= 1080,
+            "is_medium_res": img.width >= 1280 and img.height >= 720,
+            "is_landscape": img.width > img.height,
+            "aspect_ratio": round(img.width / img.height, 2) if img.height > 0 else 0
+        }})
+
+        # 占位图检测（更精确）
+        url_lower = url.lower()
+        placeholder_patterns = [
+            'placeholder', 'default', 'no-image', 'no_image',
+            'generic', 'sample', 'example', 'empty', 'missing',
+            '占位', '默认', 'icon', 'logo', 'spinner'
+        ]
+        result["is_placeholder"] = any(p in url_lower for p in placeholder_patterns)
+
+        # 小图检测（可能是缩略图或占位图）
+        result["is_thumbnail"] = img.width < 300 or img.height < 300
+
+        # 综合判断
+        if result["is_placeholder"] or result["is_thumbnail"]:
+            result["valid"] = False
+            result["issue"] = "placeholder" if result["is_placeholder"] else "thumbnail"
+
+    except requests.RequestException as e:
+        return {{"url": url, "valid": False, "error": f"下载失败: {{str(e)}}"}}
+    except Exception as e:
+        return {{"url": url, "valid": False, "error": str(e)}}
+
+    return result
+
+# 验证所有图片
+user_goal = "{user_goal_placeholder}"
+results = []
+for item in {sample_data_placeholder}:
+    for key, value in item.items():
+        if 'image' in key.lower() and isinstance(value, str) and value:
+            results.append(validate_image_deep(value, user_goal))
+
+print(json.dumps({{"images": results}}, ensure_ascii=False))
+"""
+
+
+IMAGE_CLIP_VALIDATION_TEMPLATE = """
+import requests
+from PIL import Image
+from io import BytesIO
+import json
+
+def validate_image_with_clip(url: str, user_goal: str) -> dict:
+    '''使用 CLIP 验证图片内容与需求的相关性'''
+    result = {{"url": url, "valid": True}}
+
+    try:
+        # 下载图片
+        headers = {{"User-Agent": "Mozilla/5.0"}}
+        response = requests.get(url, timeout=10, headers=headers)
+        img = Image.open(BytesIO(response.content))
+
+        # 基础验证
+        result.update({{
+            "width": img.width,
+            "height": img.height,
+            "format": img.format
+        }})
+
+        # 尝试 CLIP 验证（如果可用）
+        try:
+            import clip
+            import torch
+
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            model, preprocess = clip.load("ViT-B/32", device=device)
+
+            image_input = preprocess(img).unsqueeze(0).to(device)
+            # 构建对比文本：用户需求 vs 占位/无关内容
+            text_input = clip.tokenize([user_goal, "placeholder image", "unrelated content", "default icon"]).to(device)
+
+            with torch.no_grad():
+                image_features = model.encode_image(image_input)
+                text_features = model.encode_text(text_input)
+                logits_per_image = (image_features @ text_features.T).squeeze()
+                probs = logits_per_image.softmax(dim=0)
+
+            relevance_score = float(probs[0])
+            result["relevance_score"] = round(relevance_score, 3)
+            result["is_relevant"] = relevance_score > 0.3
+            result["method"] = "clip"
+
+        except ImportError:
+            # CLIP 未安装，使用基础验证
+            result["relevance_score"] = None
+            result["clip_skipped"] = True
+            result["method"] = "basic"
+
+    except requests.RequestException as e:
+        return {{"url": url, "valid": False, "error": f"下载失败: {{str(e)}}"}}
+    except Exception as e:
+        return {{"url": url, "valid": False, "error": str(e)}}
+
+    return result
+
+# 验证图片
+user_goal = "{user_goal_placeholder}"
+results = []
+for item in {sample_data_placeholder}:
+    for key, value in item.items():
+        if 'image' in key.lower() and isinstance(value, str) and value:
+            results.append(validate_image_with_clip(value, user_goal))
+
+print(json.dumps({{"images": results}}, ensure_ascii=False))
+"""
+
+
+PDF_DEEP_VALIDATION_TEMPLATE = """
+import requests
+import PyPDF2
+from io import BytesIO
+import json
+
+def validate_pdf_deep(url: str) -> dict:
+    '''深度验证 PDF：下载并检查内容'''
+    try:
+        headers = {{"User-Agent": "Mozilla/5.0"}}
+        response = requests.get(url, timeout=15, headers=headers)
+        response.raise_for_status()
+
+        pdf_reader = PyPDF2.PdfReader(BytesIO(response.content))
+
+        # 提取第一页文本判断内容
+        first_page_text = ""
+        if len(pdf_reader.pages) > 0:
+            first_page_text = pdf_reader.pages[0].extract_text() or ""
+
+        return {{
+            "url": url,
+            "valid": True,
+            "pages": len(pdf_reader.pages),
+            "has_content": len(first_page_text.strip()) > 50,
+            "is_encrypted": pdf_reader.is_encrypted,
+            "file_size_bytes": len(response.content),
+            "preview_text": first_page_text[:200] if first_page_text else "",
+            "metadata": dict(pdf_reader.metadata) if pdf_reader.metadata else {{}}
+        }}
+    except requests.RequestException as e:
+        return {{"url": url, "valid": False, "error": f"下载失败: {{str(e)}}"}}
+    except Exception as e:
+        return {{"url": url, "valid": False, "error": str(e)}}
+
+# 验证所有 PDF
+results = []
+for item in {sample_data_placeholder}:
+    for key, value in item.items():
+        if 'pdf' in key.lower() and isinstance(value, str) and value:
+            results.append(validate_pdf_deep(value))
+
+print(json.dumps({{"pdfs": results}}, ensure_ascii=False))
+"""
+
+
+VIDEO_DEEP_VALIDATION_TEMPLATE = """
+import requests
+import json
+
+def validate_video_deep(url: str) -> dict:
+    '''深度验证视频：检查元数据（需要网络请求）'''
+    try:
+        headers = {{"User-Agent": "Mozilla/5.0"}}
+        # HEAD 请求获取文件信息
+        response = requests.head(url, timeout=10, headers=headers, allow_redirects=True)
+
+        content_type = response.headers.get("Content-Type", "")
+        content_length = response.headers.get("Content-Length")
+
+        # 检查是否是视频
+        video_types = ["video/", "application/octet-stream"]
+        is_video = any(ct in content_type for ct in video_types)
+
+        return {{
+            "url": url,
+            "valid": is_video,
+            "content_type": content_type,
+            "file_size_bytes": int(content_length) if content_length else None,
+            "accessible": response.status_code == 200
+        }}
+    except Exception as e:
+        return {{"url": url, "valid": False, "error": str(e)}}
+
+# 验证所有视频
+results = []
+for item in {sample_data_placeholder}:
+    for key, value in item.items():
+        if 'video' in key.lower() or 'movie' in key.lower():
+            if isinstance(value, str) and value:
+                results.append(validate_video_deep(value))
+
+print(json.dumps({{"videos": results}}, ensure_ascii=False))
+"""
+
+
+# ============================================================================
+# 代码片段验证模板（SVG/HTML代码片段）
+# ============================================================================
+
+SVG_HTML_VALIDATION_TEMPLATE = """
+import json
+import warnings
+from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
+
+warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
+
+def validate_svg_html_field(field_value: str, field_name: str, user_goal: str) -> dict:
+    '''验证 SVG 或 HTML 代码片段'''
+    result = {{
+        "field": field_name,
+        "valid": False,
+        "score": 0.0,
+        "issues": [],
+        "is_svg": False,
+        "is_html": False,
+        "has_malicious_tags": False,
+        "structure_valid": False,
+        "content_length": len(field_value)
+    }}
+
+    try:
+        value_stripped = field_value.strip()
+
+        # 检测是否是 SVG
+        if value_stripped.startswith("<svg") or "<svg" in value_stripped[:200].lower():
+            result["is_svg"] = True
+
+            # SVG 语法验证
+            try:
+                soup = BeautifulSoup(field_value, "xml")
+                svg_root = soup.find("svg")
+
+                if svg_root is None:
+                    result["issues"].append("缺少<svg>根标签")
+                else:
+                    result["structure_valid"] = True
+                    result["valid"] = True
+
+                    # 检查常见属性
+                    has_width = svg_root.get("width") is not None
+                    has_height = svg_root.get("height") is not None
+                    has_viewbox = svg_root.get("viewBox") is not None
+
+                    if not any([has_width, has_height, has_viewbox]):
+                        result["issues"].append("SVG缺少尺寸属性(width/height/viewBox)")
+
+                    # 检查内容
+                    children = list(svg_root.children)
+                    if len(children) == 0:
+                        result["issues"].append("SVG为空，没有内容")
+
+                    result["score"] = 9.0 if result["structure_valid"] and len(result["issues"]) == 0 else 6.0
+
+            except Exception as e:
+                result["issues"].append(f"SVG解析失败: {{str(e)[:100]}}")
+
+        # 检测是否是 HTML 片段
+        elif value_stripped.startswith("<") and any(tag in value_stripped[:100] for tag in ["<div", "<span", "<p", "<a ", "<img", "<h1", "<h2", "<h3", "<section", "<article"]):
+            result["is_html"] = True
+
+            # HTML 语法验证
+            try:
+                soup = BeautifulSoup(field_value, "html.parser")
+                tags = soup.find_all()
+
+                if len(tags) == 0:
+                    result["issues"].append("不是有效HTML片段")
+                else:
+                    result["structure_valid"] = True
+                    result["valid"] = True
+
+                    # 安全检查（防XSS）
+                    dangerous_tags = ["script", "iframe", "object", "embed", "form"]
+                    found_dangerous = [tag.name for tag in tags if tag.name in dangerous_tags]
+
+                    if found_dangerous:
+                        result["has_malicious_tags"] = True
+                        result["issues"].append(f"包含潜在恶意标签: {{', '.join(found_dangerous)}}")
+                        result["valid"] = False
+                        result["score"] = 2.0
+                    else:
+                        # 结构完整性评分
+                        text_content = soup.get_text(strip=True)
+                        result["score"] = 8.5 if len(text_content) > 20 else 5.0
+
+            except Exception as e:
+                result["issues"].append(f"HTML解析失败: {{str(e)[:100]}}")
+
+        else:
+            result["issues"].append("不是有效的SVG或HTML代码片段")
+
+    except Exception as e:
+        result["issues"].append(f"验证失败: {{str(e)[:100]}}")
+
+    return result
+
+
+def validate_code_snippets(items: list, user_goal: str) -> dict:
+    '''验证所有代码片段字段'''
+    results = {{
+        "total": 0,
+        "valid": 0,
+        "invalid": 0,
+        "svg_count": 0,
+        "html_count": 0,
+        "malicious_count": 0,
+        "details": []
+    }}
+
+    code_keywords = ["svg", "html", "code", "snippet", "content", "description"]
+
+    for item in items:
+        for key, value in item.items():
+            if not isinstance(value, str):
+                continue
+
+            # 检查是否可能是代码片段
+            is_code_field = any(kw in key.lower() for kw in code_keywords)
+            starts_with_tag = value.strip().startswith("<")
+
+            if is_code_field or starts_with_tag:
+                validation = validate_svg_html_field(value, key, user_goal)
+                results["details"].append(validation)
+                results["total"] += 1
+
+                if validation["valid"]:
+                    results["valid"] += 1
+                else:
+                    results["invalid"] += 1
+
+                if validation["is_svg"]:
+                    results["svg_count"] += 1
+                if validation["is_html"]:
+                    results["html_count"] += 1
+                if validation["has_malicious_tags"]:
+                    results["malicious_count"] += 1
+
+    return results
+
+
+# 主程序
+user_goal = "{user_goal_placeholder}"
+items = {sample_data_placeholder}
+results = validate_code_snippets(items, user_goal)
+
+print(json.dumps(results, ensure_ascii=False, indent=2))
+"""
+
+
+# ----------------------------------------------------------------------------
+# 基础验证模板（原有）
+# ----------------------------------------------------------------------------
+
 IMAGE_VALIDATION_TEMPLATE = """
 import json
 from urllib.parse import urlparse
@@ -364,21 +751,51 @@ def get_validator_code_template(validator_type: str) -> str:
 
     Args:
         validator_type: 验证器类型
-            - "image": 图片验证
+            - "image": 图片验证（基础）
+            - "image_deep": 图片深度验证（PIL）
+            - "image_clip": 图片 CLIP 验证（图文匹配）
             - "format": 格式验证
             - "content": 内容验证
             - "combined": 综合验证（包含所有类型）
+            - "pdf": PDF 深度验证
+            - "video": 视频验证
+            - "svg_html": SVG/HTML 代码片段验证
 
     Returns:
         验证代码模板字符串
     """
     templates = {
         "image": IMAGE_VALIDATION_TEMPLATE,
+        "image_deep": IMAGE_DEEP_VALIDATION_TEMPLATE,
+        "image_clip": IMAGE_CLIP_VALIDATION_TEMPLATE,
         "format": FORMAT_VALIDATION_TEMPLATE,
         "content": CONTENT_VALIDATION_TEMPLATE,
         "combined": COMBINED_VALIDATION_TEMPLATE,
+        "pdf": PDF_DEEP_VALIDATION_TEMPLATE,
+        "video": VIDEO_DEEP_VALIDATION_TEMPLATE,
+        "svg_html": SVG_HTML_VALIDATION_TEMPLATE,
     }
     return templates.get(validator_type, COMBINED_VALIDATION_TEMPLATE)
+
+
+def get_deep_validation_template(data_type: str) -> str:
+    """获取深度验证模板
+
+    Args:
+        data_type: 数据类型
+            - "image": 返回 IMAGE_DEEP_VALIDATION_TEMPLATE
+            - "pdf": 返回 PDF_DEEP_VALIDATION_TEMPLATE
+            - "video": 返回 VIDEO_DEEP_VALIDATION_TEMPLATE
+
+    Returns:
+        深度验证代码模板字符串
+    """
+    template_map = {
+        "image": IMAGE_DEEP_VALIDATION_TEMPLATE,
+        "pdf": PDF_DEEP_VALIDATION_TEMPLATE,
+        "video": VIDEO_DEEP_VALIDATION_TEMPLATE,
+    }
+    return template_map.get(data_type, IMAGE_DEEP_VALIDATION_TEMPLATE)
 
 
 def prepare_validator_code(template: str, sample_data: List[Dict[str, Any]]) -> str:
@@ -561,6 +978,7 @@ def quick_fallback_quality_check(sample_data: List[Dict[str, Any]]) -> float:
 # ============================================================================
 
 __all__ = [
+    # 基础验证
     "get_validator_code_template",
     "prepare_validator_code",
     "extract_validation_rules",
@@ -568,4 +986,12 @@ __all__ = [
     "quick_validate_url",
     "quick_detect_duplicates",
     "quick_fallback_quality_check",
+    # 深度验证
+    "get_deep_validation_template",
+    "IMAGE_DEEP_VALIDATION_TEMPLATE",
+    "IMAGE_CLIP_VALIDATION_TEMPLATE",
+    "PDF_DEEP_VALIDATION_TEMPLATE",
+    "VIDEO_DEEP_VALIDATION_TEMPLATE",
+    # 代码片段验证
+    "SVG_HTML_VALIDATION_TEMPLATE",
 ]

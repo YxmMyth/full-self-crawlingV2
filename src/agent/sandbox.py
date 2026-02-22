@@ -132,6 +132,50 @@ class DockerSandbox:
             except:
                 pass
 
+    async def run_python_code(
+        self,
+        code: str,
+        timeout: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """
+        便捷方法：运行 Python 代码并解析 JSON 输出
+
+        CodeAct 模式：LLM 生成代码 → 沙箱执行 → 返回结构化结果
+
+        Args:
+            code: Python 代码字符串
+            timeout: 超时时间（秒）
+
+        Returns:
+            {
+                "success": bool,
+                "output": dict | str,  # 尝试解析为 JSON，失败则返回原始字符串
+                "error": str | None,
+                "stdout": str,
+                "stderr": str
+            }
+        """
+        result = await self.execute(code, timeout=timeout)
+
+        # 提取 parsed_data 作为 output
+        output = result.get("parsed_data")
+        if output is None:
+            # 如果解析失败，尝试从 stdout 提取 JSON
+            stdout = result.get("stdout", "")
+            if stdout.strip():
+                try:
+                    output = json.loads(stdout)
+                except:
+                    output = stdout
+
+        return {
+            "success": result["success"],
+            "output": output,
+            "error": result.get("error"),
+            "stdout": result.get("stdout", ""),
+            "stderr": result.get("stderr", ""),
+        }
+
 
 class SimpleSandbox:
     """
@@ -200,6 +244,48 @@ class SimpleSandbox:
                 shutil.rmtree(work_dir)
             except:
                 pass
+
+    async def run_python_code(
+        self,
+        code: str,
+        timeout: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """
+        便捷方法：运行 Python 代码并解析 JSON 输出
+
+        CodeAct 模式：LLM 生成代码 → 沙箱执行 → 返回结构化结果
+
+        Args:
+            code: Python 代码字符串
+            timeout: 超时时间（秒）
+
+        Returns:
+            {
+                "success": bool,
+                "output": dict | str,
+                "error": str | None,
+                "stdout": str,
+                "stderr": str
+            }
+        """
+        result = await self.execute(code, timeout=timeout)
+
+        output = result.get("parsed_data")
+        if output is None:
+            stdout = result.get("stdout", "")
+            if stdout.strip():
+                try:
+                    output = json.loads(stdout)
+                except:
+                    output = stdout
+
+        return {
+            "success": result["success"],
+            "output": output,
+            "error": result.get("error"),
+            "stdout": result.get("stdout", ""),
+            "stderr": result.get("stderr", ""),
+        }
 
 
 def create_sandbox(use_docker: bool = True) -> DockerSandbox | SimpleSandbox:

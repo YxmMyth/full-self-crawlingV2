@@ -120,6 +120,35 @@ def get_code_generation_prompt(url: str, user_goal: str, dom_analysis: str) -> s
     """
     生成 Plan 阶段的爬虫代码生成 Prompt
     """
+    # 检测是否需要代码片段提取
+    needs_code_extraction = _detect_code_snippet_need(user_goal)
+
+    code_extraction_guide = ""
+    if needs_code_extraction:
+        code_extraction_guide = """
+
+【代码片段提取（SVG/HTML）】
+如果用户需求包含"SVG代码"、"HTML代码片段"、"富文本"、"图标"等关键词：
+- 使用 `page.inner_html()` 或 `element.inner_html()` 提取 HTML/SVG 代码
+- 使用 `page.evaluate("el => el.outerHTML")` 获取包含元素自身的完整代码
+- 等待 JS 动态内容加载完成: `page.wait_for_selector('svg', timeout=15000)`
+
+提取示例：
+```python
+# 提取 SVG 代码
+svgs = page.locator("svg").all()
+for svg in svgs[:5]:  # 限量采样
+    svg_code = svg.evaluate("el => el.outerHTML")
+    results.append({{"svg_code": svg_code, "type": "svg"}})
+
+# 提取 HTML 片段
+html_blocks = page.locator(".rich-text, .description, [data-html]").all()
+for block in html_blocks[:5]:
+    html_snippet = block.inner_html()
+    results.append({{"html_snippet": html_snippet, "type": "html"}})
+```
+"""
+
     return f"""你是一个爬虫代码生成专家。请生成完整的爬虫代码。
 
 【任务目标】
@@ -128,6 +157,7 @@ def get_code_generation_prompt(url: str, user_goal: str, dom_analysis: str) -> s
 
 【DOM 分析结果】
 {dom_analysis}
+{code_extraction_guide}
 
 【代码要求】
 1. 使用 **playwright.sync_api**（同步模式，不是 async！）
@@ -192,6 +222,18 @@ if __name__ == "__main__":
 
 请只输出完整可执行的 Python 代码，不要有其他说明。
 """
+
+
+def _detect_code_snippet_need(user_goal: str) -> bool:
+    """检测用户需求是否包含代码片段提取关键词"""
+    keywords = [
+        "svg", "html代码", "html片段", "html snippet",
+        "代码片段", "code snippet", "图标", "icon",
+        "富文本", "rich text", "组件", "component",
+        "元素", "element", "标签", "tag"
+    ]
+    goal_lower = user_goal.lower()
+    return any(keyword in goal_lower for keyword in keywords)
 
 
 # ============================================================================
@@ -293,6 +335,288 @@ def get_code_repair_prompt(diagnosis: str, code: str) -> str:
 # ============================================================================
 # Verify 节点 Prompts
 # ============================================================================
+
+def get_deep_validation_prompt(
+    data_type: str,
+    sample_items: list,
+    user_goal: str,
+    validation_rules: dict = None,
+) -> str:
+    """
+    生成深度验证代码的 Prompt
+
+    Args:
+        data_type: "image" | "pdf" | "video"
+        sample_items: 需要验证的样本数据（JSON 字符串或列表）
+        user_goal: 用户需求描述
+        validation_rules: 验证规则（如最小分辨率要求）
+
+    Returns:
+        完整的 Python 验证代码 Prompt
+    """
+    import json
+
+    if isinstance(sample_items, list):
+        sample_data_str = json.dumps(sample_items, ensure_ascii=False)
+    else:
+        sample_data_str = sample_items
+
+    rules = validation_rules or {}
+
+    if data_type == "image":
+        min_resolution = rules.get("min_image_resolution", "1920x1080")
+        min_width, min_height = map(int, min_resolution.split("x"))
+
+        return f"""请生成 Python 代码深度验证以下图片数据。
+
+【用户需求】
+{user_goal}
+
+【验证规则】
+- 最小分辨率要求: {min_width}x{min_height}
+- 检测占位图: 是
+- 检测缩略图: 是
+
+【数据样本】
+{sample_data_str[:2000]}
+
+【代码要求】
+生成一个完整的 Python 脚本，使用 PIL (Pillow) 进行深度图片验证：
+
+1. **下载图片**: 使用 requests 下载图片（timeout=10s）
+2. **基础验证**:
+   - 分辨率检查: width >= {min_width}, height >= {min_height}
+   - 格式检查: JPEG, PNG, WebP 等常见格式
+   - 大小检查: 记录文件大小
+
+3. **占位图检测**:
+   - URL 包含: placeholder, default, no-image, generic, sample, example
+   - 中文: 占位, 默认
+   - 尺寸过小: width < 300 or height < 300
+
+4. **输出格式**:
+```json
+{{
+  "images": [
+    {{
+      "url": "...",
+      "valid": true,
+      "width": 1920,
+      "height": 1080,
+      "format": "JPEG",
+      "file_size_bytes": 123456,
+      "is_high_res": true,
+      "is_placeholder": false,
+      "is_thumbnail": false
+    }}
+  ],
+  "summary": {{
+    "total": N,
+    "valid": M,
+    "placeholder": K,
+    "low_res": L
+  }}
+}}
+```
+
+【代码模板】
+```python
+import requests
+from PIL import Image
+from io import BytesIO
+import json
+
+def validate_image(url: str) -> dict:
+    '''深度验证单张图片'''
+    try:
+        headers = {{"User-Agent": "Mozilla/5.0"}}
+        response = requests.get(url, timeout=10, headers=headers)
+        img = Image.open(BytesIO(response.content))
+
+        return {{
+            "url": url,
+            "valid": True,
+            "width": img.width,
+            "height": img.height,
+            "format": img.format,
+            "file_size_bytes": len(response.content),
+            "is_high_res": img.width >= {min_width} and img.height >= {min_height},
+            "is_placeholder": any(kw in url.lower() for kw in ['placeholder', 'default', 'no-image']),
+            "is_thumbnail": img.width < 300 or img.height < 300
+        }}
+    except Exception as e:
+        return {{"url": url, "valid": False, "error": str(e)}}
+
+# 主程序
+items = {sample_data_str[:500]}
+results = []
+for item in items:
+    for key, value in item.items():
+        if 'image' in key.lower() and isinstance(value, str):
+            results.append(validate_image(value))
+
+summary = {{
+    "total": len(results),
+    "valid": sum(1 for r in results if r.get("valid")),
+    "placeholder": sum(1 for r in results if r.get("is_placeholder")),
+    "low_res": sum(1 for r in results if not r.get("is_high_res", True))
+}}
+
+print(json.dumps({{"images": results, "summary": summary}}, ensure_ascii=False))
+```
+
+请只输出 Python 代码，不要有其他说明。
+"""
+
+    elif data_type == "pdf":
+        return f"""请生成 Python 代码深度验证以下 PDF 数据。
+
+【用户需求】
+{user_goal}
+
+【数据样本】
+{sample_data_str[:2000]}
+
+【代码要求】
+生成一个完整的 Python 脚本，使用 PyPDF2 进行深度 PDF 验证：
+
+1. **下载 PDF**: 使用 requests 下载 PDF（timeout=15s）
+2. **基础验证**:
+   - 页数检查: 记录总页数
+   - 内容检查: 提取第一页文本，判断是否有实际内容
+   - 加密检查: 判断是否加密
+
+3. **输出格式**:
+```json
+{{
+  "pdfs": [
+    {{
+      "url": "...",
+      "valid": true,
+      "pages": 10,
+      "has_content": true,
+      "is_encrypted": false,
+      "file_size_bytes": 123456,
+      "preview_text": "前200字符..."
+    }}
+  ],
+  "summary": {{
+    "total": N,
+    "valid": M,
+    "empty_content": K
+  }}
+}}
+```
+
+【代码模板】
+```python
+import requests
+import PyPDF2
+from io import BytesIO
+import json
+
+def validate_pdf(url: str) -> dict:
+    '''深度验证单个 PDF'''
+    try:
+        headers = {{"User-Agent": "Mozilla/5.0"}}
+        response = requests.get(url, timeout=15, headers=headers)
+        pdf_reader = PyPDF2.PdfReader(BytesIO(response.content))
+
+        first_page_text = ""
+        if len(pdf_reader.pages) > 0:
+            first_page_text = pdf_reader.pages[0].extract_text() or ""
+
+        return {{
+            "url": url,
+            "valid": True,
+            "pages": len(pdf_reader.pages),
+            "has_content": len(first_page_text.strip()) > 50,
+            "is_encrypted": pdf_reader.is_encrypted,
+            "file_size_bytes": len(response.content),
+            "preview_text": first_page_text[:200]
+        }}
+    except Exception as e:
+        return {{"url": url, "valid": False, "error": str(e)}}
+
+# 主程序
+items = {sample_data_str[:500]}
+results = []
+for item in items:
+    for key, value in item.items():
+        if 'pdf' in key.lower() and isinstance(value, str):
+            results.append(validate_pdf(value))
+
+summary = {{
+    "total": len(results),
+    "valid": sum(1 for r in results if r.get("valid")),
+    "empty_content": sum(1 for r in results if not r.get("has_content", True))
+}}
+
+print(json.dumps({{"pdfs": results, "summary": summary}}, ensure_ascii=False))
+```
+
+请只输出 Python 代码，不要有其他说明。
+"""
+
+    elif data_type == "video":
+        return f"""请生成 Python 代码验证以下视频数据。
+
+【用户需求】
+{user_goal}
+
+【数据样本】
+{sample_data_str[:2000]}
+
+【代码要求】
+生成一个完整的 Python 脚本，验证视频链接的可访问性：
+
+1. **HEAD 请求**: 检查链接是否可访问
+2. **内容类型**: 验证 Content-Type 是否为视频
+3. **文件大小**: 记录文件大小（如果可用）
+
+【代码模板】
+```python
+import requests
+import json
+
+def validate_video(url: str) -> dict:
+    '''验证视频链接'''
+    try:
+        headers = {{"User-Agent": "Mozilla/5.0"}}
+        response = requests.head(url, timeout=10, headers=headers, allow_redirects=True)
+
+        content_type = response.headers.get("Content-Type", "")
+        content_length = response.headers.get("Content-Length")
+
+        is_video = "video/" in content_type
+
+        return {{
+            "url": url,
+            "valid": is_video,
+            "content_type": content_type,
+            "file_size_bytes": int(content_length) if content_length else None,
+            "accessible": response.status_code == 200
+        }}
+    except Exception as e:
+        return {{"url": url, "valid": False, "error": str(e)}}
+
+# 主程序
+items = {sample_data_str[:500]}
+results = []
+for item in items:
+    for key, value in item.items():
+        if 'video' in key.lower() and isinstance(value, str):
+            results.append(validate_video(value))
+
+print(json.dumps({{"videos": results}}, ensure_ascii=False))
+```
+
+请只输出 Python 代码，不要有其他说明。
+"""
+
+    else:
+        return get_quality_evaluation_prompt(user_goal, sample_data_str)
+
 
 def get_quality_evaluation_prompt(user_goal: str, extracted_data: str) -> str:
     """
@@ -717,6 +1041,32 @@ CODE_DIAGNOSE_PROMPT = ""       # 使用 get_code_diagnose_prompt()
 CODE_REPAIR_PROMPT = ""         # 使用 get_code_repair_prompt()
 QUALITY_EVALUATION_PROMPT = ""  # 使用 get_quality_evaluation_prompt()
 REPORT_GENERATION_PROMPT = ""   # 使用 get_report_generation_prompt()
+
+
+# ============================================================================
+# 导出（新增深度验证函数）
+# ============================================================================
+
+__all__ = [
+    # 基础函数
+    "extract_python_code",
+    # Sense 节点
+    "get_sense_dom_analysis_prompt",
+    # Plan 节点
+    "get_code_generation_prompt",
+    # SOOAL 节点
+    "get_code_diagnose_prompt",
+    "get_code_repair_prompt",
+    # Verify 节点
+    "get_quality_evaluation_prompt",
+    "get_enhanced_quality_evaluation_prompt",
+    "get_deep_validation_prompt",
+    "extract_validation_rules",
+    # Report 节点
+    "get_report_generation_prompt",
+    # 常量（向后兼容）
+    "AVAILABLE_TOOLS",
+]
 
 
 # ============================================================================

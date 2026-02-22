@@ -216,14 +216,17 @@ async def verify_node(state: ReconState) -> ReconState:
     2. 沙箱执行评估代码
     3. 解析质量分数和详细统计
     4. 改进的降级策略：不只检查数量，实际检查数据内容
+    5. 新增：深度验证（可选，检查图片/PDF/视频实际内容）
     """
     from .prompts import (
         get_enhanced_quality_evaluation_prompt,
+        get_deep_validation_prompt,
         extract_python_code,
         extract_validation_rules,
     )
     from .llm import ZhipuClient
     from .sandbox import create_sandbox
+    from .state import get_deep_validation_config
 
     state["stage"] = "verify"
 
@@ -236,6 +239,7 @@ async def verify_node(state: ReconState) -> ReconState:
         # 获取验证规则（从 user_goal 中提取）
         validation_rules = extract_validation_rules(state.get("user_goal", ""))
 
+        # 基础验证
         prompt = get_enhanced_quality_evaluation_prompt(
             user_goal=state["user_goal"],
             extracted_data=sample_data_json,
@@ -271,12 +275,179 @@ async def verify_node(state: ReconState) -> ReconState:
             state["quality_issues"] = ["LLM 评估失败，使用基础验证"]
             state["quality_stats"] = {"fallback": True}
 
+        # ========== 新增：深度验证（可选） ==========
+        deep_validation_config = get_deep_validation_config()
+        if deep_validation_config["enabled"]:
+            deep_result = await run_deep_validation(
+                sample_data=sample_data[:deep_validation_config["max_images"]],
+                user_goal=state["user_goal"],
+                validation_rules=validation_rules,
+                sandbox=sandbox,
+                client=client,
+            )
+
+            # 合并深度验证结果到 quality_stats
+            if state.get("quality_stats") is None:
+                state["quality_stats"] = {}
+            state["quality_stats"]["deep_validation"] = deep_result
+
+            # 根据深度验证结果调整质量分数
+            critical_issues = deep_result.get("critical_issues", 0)
+            if critical_issues > 0:
+                # 每个严重问题扣 10%
+                penalty = min(0.5, critical_issues * 0.1)
+                state["quality_score"] = max(0, state["quality_score"] * (1 - penalty))
+                state["quality_issues"] = state.get("quality_issues", [])
+                state["quality_issues"].append(f"深度验证发现 {critical_issues} 个严重问题")
+
     except Exception as e:
         state["quality_score"] = fallback_quality_check(state.get("sample_data", []))
         state["quality_issues"] = [f"评估异常: {str(e)}"]
         state["quality_stats"] = {"fallback": True, "error": str(e)}
 
     return state
+
+
+async def run_deep_validation(
+    sample_data: list,
+    user_goal: str,
+    validation_rules: dict,
+    sandbox,
+    client,
+) -> dict:
+    """
+    运行深度验证
+
+    检测数据中是否包含图片/PDF/视频，并进行深度验证。
+
+    Args:
+        sample_data: 采样数据
+        user_goal: 用户需求
+        validation_rules: 验证规则
+        sandbox: 沙箱实例
+        client: LLM 客户端
+
+    Returns:
+        深度验证结果
+    """
+    from .prompts import get_deep_validation_prompt, extract_python_code
+
+    result = {
+        "enabled_types": [],
+        "results": {},
+        "critical_issues": 0,
+    }
+
+    # 检测数据类型
+    has_images = False
+    has_pdfs = False
+    has_videos = False
+
+    for item in sample_data:
+        if not isinstance(item, dict):
+            continue
+        for key, value in item.items():
+            if not isinstance(value, str):
+                continue
+            if 'image' in key.lower() or 'img' in key.lower():
+                has_images = True
+            elif 'pdf' in key.lower():
+                has_pdfs = True
+            elif 'video' in key.lower() or 'movie' in key.lower():
+                has_videos = True
+
+    # 图片深度验证
+    if has_images and validation_rules.get("validate_images"):
+        try:
+            result["enabled_types"].append("image")
+
+            prompt = get_deep_validation_prompt(
+                data_type="image",
+                sample_items=sample_data,
+                user_goal=user_goal,
+                validation_rules=validation_rules,
+            )
+
+            llm_response = await client.generate_code(prompt)
+            eval_code = extract_python_code(llm_response)
+
+            # 沙箱执行（需要 PIL）
+            deep_result = await sandbox.run_python_code(eval_code, timeout=60)
+
+            if deep_result["success"]:
+                result["results"]["images"] = deep_result["output"]
+
+                # 统计严重问题
+                output = deep_result.get("output", {})
+                if isinstance(output, dict):
+                    images = output.get("images", [])
+                    # 统计无效图片数量
+                    invalid_count = sum(1 for img in images if isinstance(img, dict) and not img.get("valid", True))
+                    result["critical_issues"] += invalid_count
+            else:
+                result["results"]["images"] = {"error": deep_result.get("error", "Unknown error")}
+
+        except Exception as e:
+            result["results"]["images"] = {"error": str(e)}
+
+    # PDF 深度验证
+    if has_pdfs:
+        try:
+            result["enabled_types"].append("pdf")
+
+            prompt = get_deep_validation_prompt(
+                data_type="pdf",
+                sample_items=sample_data,
+                user_goal=user_goal,
+                validation_rules=validation_rules,
+            )
+
+            llm_response = await client.generate_code(prompt)
+            eval_code = extract_python_code(llm_response)
+
+            deep_result = await sandbox.run_python_code(eval_code, timeout=60)
+
+            if deep_result["success"]:
+                result["results"]["pdfs"] = deep_result["output"]
+
+                # 统计严重问题
+                output = deep_result.get("output", {})
+                if isinstance(output, dict):
+                    pdfs = output.get("pdfs", [])
+                    invalid_count = sum(1 for pdf in pdfs if isinstance(pdf, dict) and not pdf.get("valid", True))
+                    result["critical_issues"] += invalid_count
+            else:
+                result["results"]["pdfs"] = {"error": deep_result.get("error", "Unknown error")}
+
+        except Exception as e:
+            result["results"]["pdfs"] = {"error": str(e)}
+
+    # 视频验证
+    if has_videos:
+        try:
+            result["enabled_types"].append("video")
+
+            prompt = get_deep_validation_prompt(
+                data_type="video",
+                sample_items=sample_data,
+                user_goal=user_goal,
+                validation_rules=validation_rules,
+            )
+
+            llm_response = await client.generate_code(prompt)
+            eval_code = extract_python_code(llm_response)
+
+            deep_result = await sandbox.run_python_code(eval_code, timeout=30)
+
+            if deep_result["success"]:
+                result["results"]["videos"] = deep_result["output"]
+            else:
+                result["results"]["videos"] = {"error": deep_result.get("error", "Unknown error")}
+
+        except Exception as e:
+            result["results"]["videos"] = {"error": str(e)}
+
+    return result
 
 
 def fallback_quality_check(sample_data: list) -> float:
