@@ -1,7 +1,7 @@
 # Full-Self-Crawling - Hybrid Recon Agent
 
-**Version**: v3.1.0 (Hybrid Architecture)
-**Date**: 2026-02-21
+**Version**: v3.2.0 (Enhanced Quality Validation)
+**Date**: 2026-02-22
 **Scope**: Single-site reconnaissance agent with code generation
 
 ---
@@ -277,6 +277,8 @@ class ReconState(TypedDict):
     # Verify
     quality_score: Optional[float]            # 质量分数
     sample_data: Optional[List[Dict]]         # 样本数据
+    quality_issues: Optional[List[str]]       # 质量问题列表
+    quality_stats: Optional[Dict[str, Any]]   # 详细质量统计（新增）
 
     # Report
     final_report: Optional[Dict[str, Any]]    # 最终报告
@@ -1176,7 +1178,211 @@ def get_status_summary(state: ReconState) -> dict:
 
 ---
 
-## 10. 错误处理策略
+## 10. 质量评估与验证机制
+
+### 10.1 验证架构
+
+Verify 节点采用 **CodeAct 风格验证**：LLM 生成验证代码 → 沙箱执行 → 返回详细质量报告。
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Verify 节点验证流程                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  采样数据                                                       │
+│    │                                                           │
+│    ▼                                                           │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │    LLM 生成验证代码（包含具体规则）                      │   │
+│  │  - 图片验证、格式验证、重复检测                           │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│    │                                                           │
+│    ▼                                                           │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │           沙箱执行验证代码                                │   │
+│  │  返回详细的质量报告和问题列表                             │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│    │                                                           │
+│    ▼                                                           │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │           可配置阈值决策 + 反馈到 Plan 节点              │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 10.2 验证维度
+
+| 维度 | 权重 | 验证内容 | 可审查性 |
+|------|------|----------|----------|
+| **relevance** | 0.4 | 与用户需求的相关性（字段匹配度） | ✅ 完全可审查 |
+| **completeness** | 0.3 | 必填字段完整度（非空比例） | ✅ 完全可审查 |
+| **accuracy** | 0.2 | 格式正确性（日期、价格、URL） | ✅ 完全可审查 |
+| **content_quality** | 0.1 | 内容质量（无重复、无无效内容） | ✅ 完全可审查 |
+
+### 10.3 可审查性分类
+
+#### 完全可审查的数据（文本/结构化）
+
+| 数据类型 | 审查方式 | 可验证内容 |
+|---------|---------|-----------|
+| 纯文本 | 字符串匹配、正则、LLM | 长度、格式、语义 |
+| URL | urlparse、正则、HEAD请求 | 格式、可达性 |
+| 日期/时间 | datetime.strptime、正则 | 格式、范围 |
+| 价格/数字 | 正则、类型转换 | 格式、货币符号 |
+| 邮箱/电话 | 正则 | 格式有效性 |
+| JSON/XML | 解析器、Schema验证 | 结构完整性 |
+| HTML片段 | BeautifulSoup | 标签闭合、选择器 |
+
+#### 不可完整审查的数据（需要外部工具）
+
+| 数据类型 | 局限性 | 需要的工具 |
+|---------|-------|-----------|
+| 图片URL | 只能验证URL格式 | 下载+Vision API |
+| 图片Base64 | 只能验证编码有效性 | 解码+Vision模型 |
+| 视频URL | 只能验证URL | 视频处理库 |
+| PDF链接 | 只能验证URL | PDF解析库 |
+
+### 10.4 验证规则自动提取
+
+```python
+# src/agent/prompts.py
+
+def extract_validation_rules(user_goal: str) -> dict:
+    """
+    从用户需求中自动提取验证规则
+
+    示例:
+    - "提取高清图片" → {"validate_images": True, "image_quality": "high"}
+    - "价格格式要正确" → {"validate_price": True}
+    - "不能有重复" → {"check_duplicates": True}
+    """
+    rules = {
+        "check_duplicates": True,
+        "validate_urls": True,
+    }
+
+    goal_lower = user_goal.lower()
+
+    if "图片" in goal_lower or "image" in goal_lower:
+        rules["validate_images"] = True
+        if "高清" in goal_lower or "high" in goal_lower:
+            rules["image_quality"] = "high"
+
+    if "价格" in goal_lower or "price" in goal_lower:
+        rules["validate_price"] = True
+
+    if "日期" in goal_lower or "date" in goal_lower:
+        rules["validate_date"] = True
+
+    return rules
+```
+
+### 10.5 降级策略改进
+
+**旧版问题**：只检查数据量 `min(0.9, sample_count/50)`，导致 30 条空记录能得 0.6 分
+
+**新版降级**：实际检查数据内容
+
+```python
+# src/agent/graph.py
+
+def fallback_quality_check(sample_data: list) -> float:
+    """
+    改进的降级质量检查 - 实际检查数据内容
+
+    检查项目：
+    1. 空记录检测：记录是否为空或所有值都为空
+    2. 关键字段检测：title/name/url/link 是否为空
+    3. 无意义内容检测：N/A, null, 待补充等
+    """
+    if not sample_data:
+        return 0.0
+
+    total = len(sample_data)
+    issues = 0
+    null_values = ["n/a", "null", "none", "待补充", "暂无", "tbd", "-", "—"]
+
+    for item in sample_data:
+        # 检查是否有值
+        if not item or all(v is None or v == "" for v in item.values()):
+            issues += 1
+            continue
+
+        # 检查关键字段
+        for key in ["title", "name", "url", "link"]:
+            if key in item:
+                val = str(item.get(key, "")).strip()
+                if not val or val.lower() in null_values:
+                    issues += 1
+
+    # 质量 = (有效记录数) / 总数
+    valid_ratio = (total - min(issues, total)) / total
+    return round(valid_ratio, 2)
+```
+
+### 10.6 配置选项
+
+```bash
+# .env 配置
+
+# 质量阈值 (0.0-1.0)
+QUALITY_THRESHOLD=0.6
+
+# 最大 SOOAL 迭代次数
+MAX_SOOL_ITERATIONS=6
+
+# 验证开关
+VALIDATE_IMAGES=true
+CHECK_DUPLICATES=true
+VALIDATE_URLS=true
+VALIDATE_DATES=true
+```
+
+### 10.7 质量统计输出格式
+
+```python
+{
+    "quality_score": 0.85,
+    "quality_stats": {
+        "scores": {
+            "relevance": 0.90,
+            "completeness": 0.80,
+            "accuracy": 0.95,
+            "content_quality": 0.70
+        },
+        "image_stats": {
+            "total": 50,
+            "valid": 45,
+            "placeholder": 5,
+            "invalid": 0
+        },
+        "format_stats": {
+            "date_valid": 48,
+            "date_total": 50,
+            "price_valid": 50,
+            "price_total": 50,
+            "url_valid": 49,
+            "url_total": 50
+        },
+        "content_stats": {
+            "empty_fields": 2,
+            "duplicates": 0,
+            "invalid_content": 1,
+            "total_items": 50
+        }
+    },
+    "quality_issues": [
+        "数据完整性较低: 0.8",
+        "发现占位图: 5 个"
+    ],
+    "suggestions": []
+}
+```
+
+---
+
+## 11. 错误处理策略
 
 ### 10.1 各节点错误处理
 
@@ -1275,7 +1481,7 @@ def classify_error(error: Exception) -> ErrorType:
 
 ---
 
-## 11. 完整案例演示
+## 12. 完整案例演示
 
 ### 11.1 任务输入
 
@@ -1454,7 +1660,7 @@ SOOAL Act: 修改代码为 `article.product_pod`
 
 ---
 
-## 12. Deployment
+## 13. Deployment
 
 ### 8.1 Dockerfile
 
@@ -1566,15 +1772,17 @@ recon_graph = graph.compile()
 
 ---
 
-**Document Version**: 3.1.0
-**Last Updated**: 2026-02-21
+**Document Version**: 3.2.0
+**Last Updated**: 2026-02-22
 **Key Changes**:
-- 新增 SOOAL 自修复循环独立章节
-- 新增 Orchestrator 交互协议
-- 新增错误处理策略
-- 新增完整案例演示
-- 新增读者指南
+- 新增质量评估与验证机制独立章节
+- 可配置的质量阈值（QUALITY_THRESHOLD）
+- 改进的降级策略：实际检查数据内容而非仅计数
+- 图片/格式/内容多维度验证
+- 自动从用户需求提取验证规则
+- 新增 quality_stats 详细统计输出
 
 **Changelog**:
+- v3.2.0: 增强质量验证机制，修复降级策略缺陷
 - v3.1.0: 完善文档结构，添加协议和案例
 - v3.0.0: Hybrid 架构，LangGraph 状态机，代码生成+沙箱执行
