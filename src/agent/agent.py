@@ -20,7 +20,7 @@ except ImportError:
     pass  # 如果没有 python-dotenv，就跳过
 
 from .graph import create_recon_graph
-from .state import ReconState, create_initial_state
+from .state import ReconState, create_initial_state, compute_data_success
 
 
 class SiteAgent:
@@ -76,9 +76,16 @@ class SiteAgent:
         try:
             final_state = await self.graph.ainvoke(initial_state)
 
+            data_success = final_state.get("data_success")
+            if data_success is None:
+                data_success = compute_data_success(final_state)
+
             # 构建结果（包含完整状态用于详细日志）
             result = {
                 "success": final_state["stage"] == "done",
+                "data_success": bool(data_success),
+                "completion_status": final_state.get("completion_status", final_state.get("stage", "unknown")),
+                "failure_reason": final_state.get("failure_reason"),
                 "agent_id": self.agent_id,
                 "site_url": task_params["site_url"],
                 "user_goal": task_params["user_goal"],
@@ -97,6 +104,15 @@ class SiteAgent:
                     "attempt_signatures": final_state.get("attempt_signatures", []),
                     "quality_issues": final_state.get("quality_issues", []),
                     "performance_data": final_state.get("performance_data", {}),  # 新增：性能数据
+                    "execution_result": final_state.get("execution_result", {}),
+                    "plan_verification": final_state.get("plan_verification", {}),
+                    "classification_detail": final_state.get("classification_detail", {}),
+                    "navigation_trace": final_state.get("navigation_trace", []),
+                    "website_type": final_state.get("website_type", "unknown"),
+                    "data_success": bool(data_success),
+                    "completion_status": final_state.get("completion_status", final_state.get("stage", "unknown")),
+                    "failure_reason": final_state.get("failure_reason"),
+                    "error": final_state.get("error"),
                 }
             }
 
@@ -109,10 +125,13 @@ class SiteAgent:
         except Exception as e:
             error_result = {
                 "success": False,
+                "data_success": False,
                 "agent_id": self.agent_id,
                 "site_url": task_params["site_url"],
                 "error": str(e),
                 "stage": "error",
+                "completion_status": "error",
+                "failure_reason": "AGENT_RUNTIME_ERROR",
             }
 
             # 错误回调

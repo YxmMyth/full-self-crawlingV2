@@ -1,0 +1,24 @@
+{
+  "timestamp": "20260223_155251",
+  "total_duration": 239.9,
+  "total_tasks": 1,
+  "flow_passed_tasks": 1,
+  "data_passed_tasks": 0,
+  "data_pass_rate": 0.0,
+  "results": [
+    {
+      "task_id": 1,
+      "task_name": "Amazon电商",
+      "phase": 4,
+      "success": true,
+      "flow_success": true,
+      "data_success": false,
+      "duration": 237.9,
+      "data_count": 0,
+      "error": "",
+      "failure_reason": "PLAN_PROMPT_ERROR",
+      "sample_keys": [],
+      "detail_file": "D:\\full-self-crawlingV2\\scripts\\agent_test_results\\task_01_Amazon电商_20260223_155251_detail.json"
+    }
+  ]
+}

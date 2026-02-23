@@ -64,6 +64,16 @@ async def validate_node(state: Dict[str, Any]) -> Dict[str, Any]:
         if sense_analysis.get("link_selector"):
             suggested_selectors.append(sense_analysis["link_selector"])
 
+        # ========== 修复: 如果没有建议选择器，使用选择器库 ==========
+        if not suggested_selectors:
+            from .selector_library import suggest_selectors
+            website_type = state.get("website_type", "unknown")
+            suggested_selectors = suggest_selectors(
+                state["user_goal"],
+                website_type,
+                state["site_url"]
+            )
+
         # Use SelectorValidator to test selectors on live HTML
         validator = SelectorValidator(html)
 
@@ -72,6 +82,13 @@ async def validate_node(state: Dict[str, Any]) -> Dict[str, Any]:
         for selector in suggested_selectors:
             result = validator.test_selector(selector)
             validation_results.append(result)
+
+        # ========== 修复: 确保 validation_results 非空，至少测试通用选择器 ==========
+        if not validation_results:
+            generic_selectors = ["article", ".item", ".card", "[data-id]"]
+            for selector in generic_selectors:
+                result = validator.test_selector(selector)
+                validation_results.append(result)
 
         # Calculate validation confidence
         confidence = calculate_validation_confidence(validation_results)

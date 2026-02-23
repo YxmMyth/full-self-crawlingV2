@@ -1,6 +1,6 @@
 {
   "stage": "done",
-  "quality_score": 0.0,
+  "quality_score": 0,
   "sample_data": [],
   "sool_iteration": 6,
   "failure_history": [
@@ -12,71 +12,54 @@
       "data_count": 0
     },
     {
-      "iteration": 2,
-      "failure_type": "unknown",
-      "root_cause": "Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429",
-      "suggested_fix": "检查错误信息",
-      "data_count": 0
-    },
-    {
-      "iteration": 3,
-      "failure_type": "unknown",
-      "root_cause": "Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429",
-      "suggested_fix": "检查错误信息",
-      "data_count": 0
-    },
-    {
-      "iteration": 4,
-      "failure_type": "unknown",
-      "root_cause": "Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429",
-      "suggested_fix": "检查错误信息",
-      "data_count": 0
-    },
-    {
-      "iteration": 5,
-      "failure_type": "unknown",
-      "root_cause": "Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429",
-      "suggested_fix": "检查错误信息",
-      "data_count": 0
-    },
-    {
       "iteration": 6,
-      "failure_type": "unknown",
-      "root_cause": "Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429",
-      "suggested_fix": "检查错误信息",
-      "data_count": 0
+      "failure_type": "selector_error",
+      "root_cause": "Zillow主页不直接显示房产列表，需要先进行搜索或导航到特定城市/区域页面。当前代码直接访问主页并尝试提取房产卡片，但主页主要是搜索框和推荐内容，没有[data-test='property-card']或li[role='group']这样的列表元素。",
+      "suggested_fix": "1. 导航到具体的搜索结果页面，例如'https://www.zillow.com/homes/'或特定城市如'https://www.zillow.com/new-york-ny/'。2. 添加页面内容调试，打印page.content()检查实际加载的HTML。3. 使用更通用的选择器如'article'或'div'配合文本内容定位房产信息。4. 考虑模拟用户输入搜索条件并点击搜索按钮。",
+      "avoid_repeat": "避免直接在主页提取列表数据，应先导航到包含实际房产列表的页面。添加更多调试输出以验证选择器是否匹配到元素。",
+      "data_count": 0,
+      "website_type": "real_estate",
+      "anti_bot_level": "high",
+      "attempted_strategies": [],
+      "partial_success": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      }
     }
   ],
   "reflection_memory": [
     "执行失败: 'NoneType' object is not subscriptable，数据量: 0",
-    "执行失败: Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429，数据量: 0",
-    "执行失败: Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429，数据量: 0",
-    "执行失败: Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429，数据量: 0",
-    "执行失败: Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429，数据量: 0",
-    "执行失败: Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429，数据量: 0"
+    "```json\n{\n    \"failure_type\": \"selector_error\",\n    \"root_cause\": \"Zillow主页不直接显示房产列表，需要先进行搜索或导航到特定城市/区域页面。当前代码直接访问主页并尝试提取房产卡片，但主页主要是搜索框和推荐内容，没有[data-test='property-card']或li[role='group']这样的列表元素。\",\n    \"suggested_fix\": \"1. 导航到具体的搜索结果页面，例如'https://www.zillow.com/homes/'或特定城市如'https://www.zillow.com/new-york-ny/'。2. 添加页面内容调试，打印page.content()检查实际加载的HTML。3. 使用更通用的选择器如'article'或'div'配合文本内容定位房产信息。4. 考虑模拟用户输入搜索条件并点击搜索按钮。\",\n    \"avoid_repeat\": \"避免直接在主页提取列表数据，应先导航到包含实际房产列表的页面。添加更多调试输出以验证选择器是否匹配到元素。\"\n}\n```"
   ],
-  "attempt_signatures": null,
+  "attempt_signatures": [
+    "a6695ab3"
+  ],
   "quality_issues": [
-    "评估异常: Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+    "Խϵ: 0ֱֶοȱʧ"
   ],
   "agent_result": {
     "success": true,
-    "agent_id": "agent_e12a9ddb",
+    "agent_id": "agent_524e48e0",
     "site_url": "https://www.zillow.com/",
     "user_goal": "房地产楼盘站（户型图SVG/PDF/价格）",
     "report": {
       "site_url": "https://www.zillow.com/",
       "user_goal": "房地产楼盘站（户型图SVG/PDF/价格）",
-      "quality_score": 0.0,
+      "quality_score": 0,
       "sample_data": [],
-      "generated_code": ""
+      "generated_code": "from playwright.sync_api import sync_playwright\nimport json\nimport time\nimport random\n\nUSER_AGENTS = [\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36\",\n    \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36\",\n    \"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36\"\n]\n\ndef scrape(url: str) -> dict:\n    results = []\n    browser = None\n    try:\n        with sync_playwright() as p:\n            browser = p.chromium.launch(\n                headless=True,\n                args=[\"--disable-blink-features=AutomationControlled\", \"--no-sandbox\", \"--disable-web-security\"]\n            )\n            \n            # 修复：直接使用 browser.new_page()，不使用 browser.new_context()\n            page = browser.new_page(\n                user_agent=random.choice(USER_AGENTS),\n                viewport={\"width\": 1920, \"height\": 1080}\n            )\n\n            # Navigate to URL\n            page.goto(url, wait_until='domcontentloaded', timeout=30000)\n\n            # Wait for body to ensure basic load\n            try:\n                page.wait_for_selector('body', timeout=10000)\n            except Exception:\n                pass\n\n            # Human behavior simulation\n            time.sleep(random.uniform(2, 4))\n\n            # === 数据提取 ===\n            \n            # 尝试等待列表容器加载\n            try:\n                page.wait_for_selector(\"[data-test='property-card']\", timeout=5000)\n            except:\n                pass\n\n            # 提取房产卡片\n            # 使用建议的选择器 [data-test='property-card']\n            items = page.locator(\"[data-test='property-card']\").all()\n            \n            # 如果没有找到，尝试更通用的选择器作为回退\n            if not items:\n                items = page.locator(\"li[role='group']\").all()\n\n            for item in items:\n                try:\n                    result = {}\n                    \n                    # 1. 提取价格 [data-test='property-card-price']\n                    try:\n                        price_el = item.locator(\"[data-test='property-card-price']\").first\n                        if price_el.count() > 0:\n                            result[\"price\"] = price_el.text_content().strip()\n                    except:\n                        pass\n\n                    # 2. 提取地址/标题 (尝试多个可能的选择器)\n                    try:\n                        addr_el = item.locator(\"[data-test='property-card-addr']\").first\n                        if addr_el.count() > 0:\n                            result[\"address\"] = addr_el.text_content().strip()\n                        else:\n                            # 备选选择器\n                            addr_el = item.locator(\"address\").first\n                            if addr_el.count() > 0:\n                                result[\"address\"] = addr_el.text_content().strip()\n                    except:\n                        pass\n\n                    # 3. 提取详情链接\n                    try:\n                        link_el = item.locator(\"a\").first\n                        if link_el.count() > 0:\n                            href = link_el.get_attribute(\"href\")\n                            if href:\n                                result[\"link\"] = href if href.startswith(\"http\") else \"https://www.zillow.com\" + href\n                    except:\n                        pass\n\n                    # 4. 提取 SVG (户型图或图标)\n                    # Zillow 列表页通常包含 SVG 图标(床/浴/面积)，这里提取它们\n                    try:\n                        svgs = item.locator(\"svg\").all()\n                        svg_codes = []\n                        for svg in svgs:\n                            # 获取 SVG 的 outerHTML\n                            code = svg.evaluate(\"el => el.outerHTML\")\n                            svg_codes.append(code)\n                        \n                        if svg_codes:\n                            result[\"svg_icons\"] = svg_codes\n                    except:\n                        pass\n\n                    # 数据验证：至少有价格或地址\n                    if result.get(\"price\") or result.get(\"address\"):\n                        results.append(result)\n\n                except Exception as e:\n                    # 单个卡片提取失败，跳过继续下一个\n                    continue\n\n            # === 备选方案：如果单个卡片提取失败，尝试全局提取 ===\n            if not results:\n                try:\n                    prices = page.locator(\"[data-test='property-card-price']\").all()\n                    for p in prices:\n                        try:\n                            results.append({\"price\": p.text_content()})\n                        except:\n                            pass\n                except:\n                    pass\n\n    except Exception as e:\n        # 记录全局错误但不中断程序流程\n        error = str(e)\n    finally:\n        if browser:\n            browser.close()\n\n    # 数据清洗和验证\n    valid_results = [r for r in results if r.get(\"price\") or r.get(\"address\")]\n\n    # 修复：补全被截断的返回语句\n    return {\n        \"results\": valid_results,\n        \"metadata\": {\n            \"total_extracted\": len(valid_results)\n        }\n    }"
     },
-    "markdown_report": "# 网站数据侦察报告\n\n## 站点信息\n- URL: https://www.zillow.com/\n- 用户需求: 房地产楼盘站（户型图SVG/PDF/价格）\n\n## 侦察总结\n- SOOAL 迭代: 6\n- 质量分数: 0.0\n- 样本数量: 0\n",
-    "generated_code": "",
+    "markdown_report": "```markdown\n# 网站数据侦察报告\n\n## 站点信息\n- URL: https://www.zillow.com/\n- 用户需求: 房地产楼盘站（户型图SVG/PDF/价格）\n- 侦察时间: 2026-05-21\n\n## 侦察总结\n- 估算数据总量: 海量 (百万级)\n- 样本质量分数: 0/1.0 (本次未捕获样本)\n- 数据结构化程度: 高 (数据封装在 JSON/JS 中)\n\n## 站点特征分析\n- 页面类型: SPA (单页应用) / 动态渲染\n- 分页方式: 无限滚动\n- 反爬等级: 极高 (Akamai, 行为分析, 强验证码)\n- 验证机制: 需处理 Cookie/Headers 挑战\n\n## 真实样本预览\n```json\n// 状态: 本次侦察未捕获到有效样本 (样本数量: 0)\n// 原因: 站点为重度 JS 渲染，静态请求被拦截或未返回数据。\n// 预期数据结构 (基于站点分析):\n{\n  \"listingId\": \"string\",\n  \"price\": 500000,\n  \"address\": {\n    \"streetAddress\": \"123 Main St\",\n    \"city\": \"Seattle\",\n    \"state\": \"WA\",\n    \"zipCode\": \"98101\"\n  },\n  \"floorPlans\": [\n    {\n      \"type\": \"Image/SVG\", // Zillow 主要是图片，极少直接 PDF\n      \"url\": \"https://photos.zillowstatic.com/...\",\n      \"name\": \"Floor Plan 1\"\n    }\n  ]\n}\n```\n\n## 可爬性评估\n- 反爬等级: 高\n- 技术难度: 复杂\n- 主要障碍:\n  1. **JS 动态渲染**: 列表页和详情页数据由前端 React 框架动态生成，无法直接通过静态 HTML 获取。\n  2. **反爬对抗**: 强烈的 WAF (Web Application Firewall) 拦截，对 IP 和指纹非常敏感。\n  3. **户型图格式**: Zillow 户型图通常为 JPG/PNG 图片，而非独立的 SVG/PDF 文件，需从 DOM 或 API 中提取图片链接。\n\n## 推荐爬取策略\n1. **架构选择**: 使用 Playwright 或 Selenium 进行浏览器自动化，配合 `stealth` 插件隐藏自动化特征。\n2. **数据获取**:\n   - **方案 A (推荐)**: 逆向 Zillow 的内部 GraphQL/REST API。通过拦截网络请求，直接获取 JSON 格式的房源数据（包含价格、图片链接）。\n   - **方案 B**: 通过浏览器模拟滚动加载列表，进入详情页解析 DOM 获取户型图 URL。\n3. **反爬应对**:\n   - 使用高质量的住宅代理 轮换 IP。\n   - 维护有效的 Cookie 池。\n   - 严格控制请求频率。\n4. **户型图处理**: 针对用户需求的 SVG/PDF，需注意 Zillow 主要提供位图。如需矢量图，可能需要从特定建筑商页面寻找或对图片进行 OCR/矢量化处理。\n```",
+    "generated_code": "from playwright.sync_api import sync_playwright\nimport json\nimport time\nimport random\n\nUSER_AGENTS = [\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36\",\n    \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36\",\n    \"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36\"\n]\n\ndef scrape(url: str) -> dict:\n    results = []\n    browser = None\n    try:\n        with sync_playwright() as p:\n            browser = p.chromium.launch(\n                headless=True,\n                args=[\"--disable-blink-features=AutomationControlled\", \"--no-sandbox\", \"--disable-web-security\"]\n            )\n            \n            # 修复：直接使用 browser.new_page()，不使用 browser.new_context()\n            page = browser.new_page(\n                user_agent=random.choice(USER_AGENTS),\n                viewport={\"width\": 1920, \"height\": 1080}\n            )\n\n            # Navigate to URL\n            page.goto(url, wait_until='domcontentloaded', timeout=30000)\n\n            # Wait for body to ensure basic load\n            try:\n                page.wait_for_selector('body', timeout=10000)\n            except Exception:\n                pass\n\n            # Human behavior simulation\n            time.sleep(random.uniform(2, 4))\n\n            # === 数据提取 ===\n            \n            # 尝试等待列表容器加载\n            try:\n                page.wait_for_selector(\"[data-test='property-card']\", timeout=5000)\n            except:\n                pass\n\n            # 提取房产卡片\n            # 使用建议的选择器 [data-test='property-card']\n            items = page.locator(\"[data-test='property-card']\").all()\n            \n            # 如果没有找到，尝试更通用的选择器作为回退\n            if not items:\n                items = page.locator(\"li[role='group']\").all()\n\n            for item in items:\n                try:\n                    result = {}\n                    \n                    # 1. 提取价格 [data-test='property-card-price']\n                    try:\n                        price_el = item.locator(\"[data-test='property-card-price']\").first\n                        if price_el.count() > 0:\n                            result[\"price\"] = price_el.text_content().strip()\n                    except:\n                        pass\n\n                    # 2. 提取地址/标题 (尝试多个可能的选择器)\n                    try:\n                        addr_el = item.locator(\"[data-test='property-card-addr']\").first\n                        if addr_el.count() > 0:\n                            result[\"address\"] = addr_el.text_content().strip()\n                        else:\n                            # 备选选择器\n                            addr_el = item.locator(\"address\").first\n                            if addr_el.count() > 0:\n                                result[\"address\"] = addr_el.text_content().strip()\n                    except:\n                        pass\n\n                    # 3. 提取详情链接\n                    try:\n                        link_el = item.locator(\"a\").first\n                        if link_el.count() > 0:\n                            href = link_el.get_attribute(\"href\")\n                            if href:\n                                result[\"link\"] = href if href.startswith(\"http\") else \"https://www.zillow.com\" + href\n                    except:\n                        pass\n\n                    # 4. 提取 SVG (户型图或图标)\n                    # Zillow 列表页通常包含 SVG 图标(床/浴/面积)，这里提取它们\n                    try:\n                        svgs = item.locator(\"svg\").all()\n                        svg_codes = []\n                        for svg in svgs:\n                            # 获取 SVG 的 outerHTML\n                            code = svg.evaluate(\"el => el.outerHTML\")\n                            svg_codes.append(code)\n                        \n                        if svg_codes:\n                            result[\"svg_icons\"] = svg_codes\n                    except:\n                        pass\n\n                    # 数据验证：至少有价格或地址\n                    if result.get(\"price\") or result.get(\"address\"):\n                        results.append(result)\n\n                except Exception as e:\n                    # 单个卡片提取失败，跳过继续下一个\n                    continue\n\n            # === 备选方案：如果单个卡片提取失败，尝试全局提取 ===\n            if not results:\n                try:\n                    prices = page.locator(\"[data-test='property-card-price']\").all()\n                    for p in prices:\n                        try:\n                            results.append({\"price\": p.text_content()})\n                        except:\n                            pass\n                except:\n                    pass\n\n    except Exception as e:\n        # 记录全局错误但不中断程序流程\n        error = str(e)\n    finally:\n        if browser:\n            browser.close()\n\n    # 数据清洗和验证\n    valid_results = [r for r in results if r.get(\"price\") or r.get(\"address\")]\n\n    # 修复：补全被截断的返回语句\n    return {\n        \"results\": valid_results,\n        \"metadata\": {\n            \"total_extracted\": len(valid_results)\n        }\n    }",
     "stage": "done",
     "final_state": {
       "stage": "done",
-      "quality_score": 0.0,
+      "quality_score": 0,
       "sample_data": [],
       "sool_iteration": 6,
       "failure_history": [
@@ -88,52 +71,35 @@
           "data_count": 0
         },
         {
-          "iteration": 2,
-          "failure_type": "unknown",
-          "root_cause": "Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429",
-          "suggested_fix": "检查错误信息",
-          "data_count": 0
-        },
-        {
-          "iteration": 3,
-          "failure_type": "unknown",
-          "root_cause": "Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429",
-          "suggested_fix": "检查错误信息",
-          "data_count": 0
-        },
-        {
-          "iteration": 4,
-          "failure_type": "unknown",
-          "root_cause": "Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429",
-          "suggested_fix": "检查错误信息",
-          "data_count": 0
-        },
-        {
-          "iteration": 5,
-          "failure_type": "unknown",
-          "root_cause": "Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429",
-          "suggested_fix": "检查错误信息",
-          "data_count": 0
-        },
-        {
           "iteration": 6,
-          "failure_type": "unknown",
-          "root_cause": "Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429",
-          "suggested_fix": "检查错误信息",
-          "data_count": 0
+          "failure_type": "selector_error",
+          "root_cause": "Zillow主页不直接显示房产列表，需要先进行搜索或导航到特定城市/区域页面。当前代码直接访问主页并尝试提取房产卡片，但主页主要是搜索框和推荐内容，没有[data-test='property-card']或li[role='group']这样的列表元素。",
+          "suggested_fix": "1. 导航到具体的搜索结果页面，例如'https://www.zillow.com/homes/'或特定城市如'https://www.zillow.com/new-york-ny/'。2. 添加页面内容调试，打印page.content()检查实际加载的HTML。3. 使用更通用的选择器如'article'或'div'配合文本内容定位房产信息。4. 考虑模拟用户输入搜索条件并点击搜索按钮。",
+          "avoid_repeat": "避免直接在主页提取列表数据，应先导航到包含实际房产列表的页面。添加更多调试输出以验证选择器是否匹配到元素。",
+          "data_count": 0,
+          "website_type": "real_estate",
+          "anti_bot_level": "high",
+          "attempted_strategies": [],
+          "partial_success": {
+            "partial_success": true,
+            "success_rate": 1.0,
+            "issues": [],
+            "strengths": [
+              "Code executed successfully"
+            ],
+            "recommendations": []
+          }
         }
       ],
       "reflection_memory": [
         "执行失败: 'NoneType' object is not subscriptable，数据量: 0",
-        "执行失败: Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429，数据量: 0",
-        "执行失败: Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429，数据量: 0",
-        "执行失败: Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429，数据量: 0",
-        "执行失败: Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429，数据量: 0",
-        "执行失败: Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429，数据量: 0"
+        "```json\n{\n    \"failure_type\": \"selector_error\",\n    \"root_cause\": \"Zillow主页不直接显示房产列表，需要先进行搜索或导航到特定城市/区域页面。当前代码直接访问主页并尝试提取房产卡片，但主页主要是搜索框和推荐内容，没有[data-test='property-card']或li[role='group']这样的列表元素。\",\n    \"suggested_fix\": \"1. 导航到具体的搜索结果页面，例如'https://www.zillow.com/homes/'或特定城市如'https://www.zillow.com/new-york-ny/'。2. 添加页面内容调试，打印page.content()检查实际加载的HTML。3. 使用更通用的选择器如'article'或'div'配合文本内容定位房产信息。4. 考虑模拟用户输入搜索条件并点击搜索按钮。\",\n    \"avoid_repeat\": \"避免直接在主页提取列表数据，应先导航到包含实际房产列表的页面。添加更多调试输出以验证选择器是否匹配到元素。\"\n}\n```"
       ],
-      "attempt_signatures": null,
+      "attempt_signatures": [
+        "a6695ab3"
+      ],
       "quality_issues": [
-        "评估异常: Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+        "Խϵ: 0ֱֶοȱʧ"
       ]
     }
   }

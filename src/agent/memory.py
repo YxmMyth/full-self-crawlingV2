@@ -162,8 +162,8 @@ def is_similar_failure(
     """
     return (
         f1.get("failure_type") == f2.get("failure_type")
-        and f1.get("root_cause", "")[:threshold]
-        == f2.get("root_cause", "")[:threshold]
+        and (f1.get("root_cause") or "")[:threshold]
+        == (f2.get("root_cause") or "")[:threshold]
     )
 
 

@@ -1,0 +1,31 @@
+{
+  "summary": {
+    "task_id": 6,
+    "task_name": "Zillow房产",
+    "phase": 3,
+    "url": "https://www.zillow.com/",
+    "goal": "提取房产信息，包括价格、户型图链接",
+    "flow_success": false,
+    "data_success": false,
+    "duration": 255.0,
+    "data_count": 0,
+    "error": "Recursion limit of 10000 reached without hitting a stop condition. You can increase the limit by setting the `recursion_limit` config key.\nFor troubleshooting, visit: https://docs.langchain.com/oss/python/langgraph/errors/GRAPH_RECURSION_LIMIT",
+    "failure_reason": "AGENT_RUNTIME_ERROR",
+    "sample_keys": []
+  },
+  "details": {
+    "generated_code": "",
+    "markdown_report": "",
+    "quality_score": 0,
+    "sool_iteration": 0,
+    "failure_history": [],
+    "reflection_memory": [],
+    "attempt_signatures": [],
+    "quality_issues": [],
+    "plan_verification": {},
+    "execution_result": {},
+    "classification_detail": {},
+    "navigation_trace": [],
+    "sample_data": []
+  }
+}

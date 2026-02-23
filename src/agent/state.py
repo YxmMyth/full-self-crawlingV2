@@ -1,8 +1,6 @@
-"""
-State - LangGraph 状态定义
-
-定义侦察任务的状态结构，用于 LangGraph 状态机。
-"""
+﻿"""
+State - LangGraph 鐘舵€佸畾涔?
+瀹氫箟渚﹀療浠诲姟鐨勭姸鎬佺粨鏋勶紝鐢ㄤ簬 LangGraph 鐘舵€佹満銆?"""
 
 from typing import TypedDict, List, Dict, Any, Optional
 from datetime import datetime
@@ -10,32 +8,26 @@ import os
 
 
 # ============================================================================
-# 配置函数 - 从环境变量获取阈值
-# ============================================================================
+# 閰嶇疆鍑芥暟 - 浠庣幆澧冨彉閲忚幏鍙栭槇鍊?# ============================================================================
 
 def get_quality_threshold() -> float:
-    """获取质量阈值，默认 0.6
+    """鑾峰彇璐ㄩ噺闃堝€硷紝榛樿 0.6
 
-    可以通过环境变量 QUALITY_THRESHOLD 配置。
-    低于此值的质量分数将触发代码重新生成。
-    """
+    鍙互閫氳繃鐜鍙橀噺 QUALITY_THRESHOLD 閰嶇疆銆?    浣庝簬姝ゅ€肩殑璐ㄩ噺鍒嗘暟灏嗚Е鍙戜唬鐮侀噸鏂扮敓鎴愩€?    """
     return float(os.getenv("QUALITY_THRESHOLD", "0.6"))
 
 
 def get_max_sool_iterations() -> int:
-    """获取最大 SOOAL 迭代次数，默认 6
+    """鑾峰彇鏈€澶?SOOAL 杩唬娆℃暟锛岄粯璁?6
 
-    可以通过环境变量 MAX_SOOL_ITERATIONS 配置。
-    达到此次数后将停止代码修复，直接生成报告。
-    """
-    return int(os.getenv("MAX_SOOL_ITERATIONS", "6"))
+    鍙互閫氳繃鐜鍙橀噺 MAX_SOOL_ITERATIONS 閰嶇疆銆?    杈惧埌姝ゆ鏁板悗灏嗗仠姝唬鐮佷慨澶嶏紝鐩存帴鐢熸垚鎶ュ憡銆?    """
+    return int(os.getenv("MAX_SOOL_ITERATIONS", "3"))
 
 
 def get_validation_config() -> Dict[str, bool]:
-    """获取验证配置选项
+    """鑾峰彇楠岃瘉閰嶇疆閫夐」
 
-    返回从环境变量读取的验证开关配置。
-    """
+    杩斿洖浠庣幆澧冨彉閲忚鍙栫殑楠岃瘉寮€鍏抽厤缃€?    """
     return {
         "validate_images": os.getenv("VALIDATE_IMAGES", "true").lower() == "true",
         "check_image_accessibility": os.getenv("CHECK_IMAGE_ACCESSIBILITY", "false").lower() == "true",
@@ -47,19 +39,16 @@ def get_validation_config() -> Dict[str, bool]:
 
 def get_deep_validation_config() -> Dict[str, Any]:
     """
-    获取深度验证配置
+    鑾峰彇娣卞害楠岃瘉閰嶇疆
 
-    返回从环境变量读取的深度验证配置。
-    深度验证会在沙箱中下载和验证实际内容（图片、PDF、视频）。
-
+    杩斿洖浠庣幆澧冨彉閲忚鍙栫殑娣卞害楠岃瘉閰嶇疆銆?    娣卞害楠岃瘉浼氬湪娌欑涓笅杞藉拰楠岃瘉瀹為檯鍐呭锛堝浘鐗囥€丳DF銆佽棰戯級銆?
     Returns:
-        配置字典，包含：
-        - enabled: 是否启用深度验证
-        - max_images: 最多验证的图片数量
-        - min_image_resolution: 最小图片分辨率要求
-        - pdf_validation_enabled: 是否验证 PDF
-        - clip_relevance_threshold: CLIP 相关性阈值
-    """
+        閰嶇疆瀛楀吀锛屽寘鍚細
+        - enabled: 鏄惁鍚敤娣卞害楠岃瘉
+        - max_images: 鏈€澶氶獙璇佺殑鍥剧墖鏁伴噺
+        - min_image_resolution: 鏈€灏忓浘鐗囧垎杈ㄧ巼瑕佹眰
+        - pdf_validation_enabled: 鏄惁楠岃瘉 PDF
+        - clip_relevance_threshold: CLIP 鐩稿叧鎬ч槇鍊?    """
     min_resolution = os.getenv("MIN_IMAGE_RESOLUTION", "1920x1080")
 
     return {
@@ -76,39 +65,37 @@ def get_deep_validation_config() -> Dict[str, Any]:
 
 def get_vision_api_config() -> Dict[str, Any]:
     """
-    获取 Vision API 配置
+    鑾峰彇 Vision API 閰嶇疆
 
-    支持多个 Vision API 提供商：
+    鏀寔澶氫釜 Vision API 鎻愪緵鍟嗭細
     - openai: OpenAI GPT-4V
-    - aliyun: 阿里云百炼多模态大模型
-    - tencent: 腾讯云（预留）
-    - none: 禁用
+    - aliyun: 闃块噷浜戠櫨鐐煎妯℃€佸ぇ妯″瀷
+    - tencent: 鑵捐浜戯紙棰勭暀锛?    - none: 绂佺敤
 
     Returns:
-        配置字典，包含：
-        - provider: 提供商名称
-        - enabled: 是否启用
-        - api_key: API 密钥
-        - model: 模型名称
+        閰嶇疆瀛楀吀锛屽寘鍚細
+        - provider: 鎻愪緵鍟嗗悕绉?        - enabled: 鏄惁鍚敤
+        - api_key: API 瀵嗛挜
+        - model: 妯″瀷鍚嶇О
     """
     provider = os.getenv("VISION_API_PROVIDER", "none").lower()
     enabled = os.getenv("ENABLE_VISION_API", "false").lower() == "true"
 
-    # 默认模型配置
+    # 榛樿妯″瀷閰嶇疆
     default_models = {
         "openai": "gpt-4o",
-        "aliyun": "qwen3-omni-flash",  # 多模态能力模型
+        "aliyun": "qwen3-omni-flash",  # 澶氭ā鎬佽兘鍔涙ā鍨?
         "tencent": "",
     }
 
-    # 默认 base_url 配置
+    # 榛樿 base_url 閰嶇疆
     default_base_urls = {
         "openai": "",
-        "aliyun": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",  # 默认新加坡
+        "aliyun": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",  # 榛樿鏂板姞鍧?
         "tencent": "",
     }
 
-    # 获取 API Key（根据 provider）
+    # 鑾峰彇 API Key锛堟牴鎹?provider锛?
     if provider == "openai":
         api_key = os.getenv("OPENAI_API_KEY", "")
     elif provider == "aliyun":
@@ -119,7 +106,7 @@ def get_vision_api_config() -> Dict[str, Any]:
         api_key = ""
         enabled = False
 
-    # 获取 base_url（根据 provider）
+    # 鑾峰彇 base_url锛堟牴鎹?provider锛?
     if provider == "aliyun":
         base_url = os.getenv("ALIYUN_BASE_URL", default_base_urls.get("aliyun", ""))
     elif provider == "openai":
@@ -138,13 +125,13 @@ def get_vision_api_config() -> Dict[str, Any]:
 
 def get_stealth_config() -> Dict[str, Any]:
     """
-    获取隐身配置
+    鑾峰彇闅愯韩閰嶇疆
 
     Returns:
-        配置字典，包含：
-        - auto_detect: 是否自动检测反爬虫等级
-        - default_level: 默认隐身等级
-        - levels: 各等级的配置
+        閰嶇疆瀛楀吀锛屽寘鍚細
+        - auto_detect: 鏄惁鑷姩妫€娴嬪弽鐖櫕绛夌骇
+        - default_level: 榛樿闅愯韩绛夌骇
+        - levels: 鍚勭瓑绾х殑閰嶇疆
     """
     return {
         "auto_detect": os.getenv("STEALTH_AUTO_DETECT", "true").lower() == "true",
@@ -176,94 +163,92 @@ def get_stealth_config() -> Dict[str, Any]:
 
 def get_verification_confidence_threshold() -> float:
     """
-    获取验证置信度阈值
-
+    鑾峰彇楠岃瘉缃俊搴﹂槇鍊?
     Returns:
-        置信度阈值 (默认 0.7)
+        缃俊搴﹂槇鍊?(榛樿 0.7)
     """
     return float(os.getenv("VERIFICATION_CONFIDENCE_THRESHOLD", "0.7"))
 
 
 class ReconState(TypedDict):
-    """侦察任务状态
-
-    LangGraph 状态机使用的核心数据结构
-    """
-    # ===== 输入 =====
+    """渚﹀療浠诲姟鐘舵€?
+    LangGraph 鐘舵€佹満浣跨敤鐨勬牳蹇冩暟鎹粨鏋?    """
+    # ===== 杈撳叆 =====
     site_url: str
     user_goal: str
     task_id: str
     created_at: str
 
-    # ===== Sense 节点 =====
+    # ===== Sense 鑺傜偣 =====
     site_context: Optional[Dict[str, Any]]
     detected_features: Optional[List[str]]
     html_snapshot: Optional[str]
-    sense_analysis: Optional[Dict[str, Any]]  # DOM 分析结果
-    valid_selectors: Optional[List[str]]  # 验证过的选择器
-    dom_structure: Optional[Dict[str, Any]]  # DOM 结构分析
-    stealth_enabled: Optional[bool]  # 是否启用反爬虫绕过
-
+    sense_analysis: Optional[Dict[str, Any]]  # DOM 鍒嗘瀽缁撴灉
+    valid_selectors: Optional[List[str]]  # 楠岃瘉杩囩殑閫夋嫨鍣?
+    dom_structure: Optional[Dict[str, Any]]  # DOM 缁撴瀯鍒嗘瀽
+    stealth_enabled: Optional[bool]  # 鏄惁鍚敤鍙嶇埇铏粫杩?
     # ===== Phase 2: Stealth Configuration =====
-    stealth_config: Optional[Dict[str, Any]]  # 隐身配置 (level, settings)
-    anti_bot_level: Optional[str]  # 反爬虫等级检测 (none/low/medium/high)
+    stealth_config: Optional[Dict[str, Any]]  # 闅愯韩閰嶇疆 (level, settings)
+    anti_bot_level: Optional[str]  # 鍙嶇埇铏瓑绾ф娴?(none/low/medium/high)
 
-    # ===== Interact 节点（多步交互）=====
-    interaction_result: Optional[Dict[str, Any]]  # 交互执行结果
-    interaction_detected: Optional[bool]  # 是否检测到需要交互
-    final_url_after_interaction: Optional[str]  # 交互后的最终 URL
+    # ===== Interact 鑺傜偣锛堝姝ヤ氦浜掞級=====
+    interaction_result: Optional[Dict[str, Any]]  # 浜や簰鎵ц缁撴灉
+    interaction_detected: Optional[bool]  # 鏄惁妫€娴嬪埌闇€瑕佷氦浜?
+    final_url_after_interaction: Optional[str]  # 浜や簰鍚庣殑鏈€缁?URL
 
-    # ===== Plan 节点 =====
+    # ===== Plan 鑺傜偣 =====
     generated_code: Optional[str]
     plan_reasoning: Optional[str]
 
     # ===== Phase 1: Validation Report =====
-    validation_report: Optional[Dict[str, Any]]  # 选择器验证报告
-    validated_selectors: Optional[List[str]]  # 实际验证通过的选择器
-    plan_verification: Optional[Dict[str, Any]]  # 代码计划验证结果
-    dry_run_results: Optional[Dict[str, Any]]  # 干运行结果
-
-    # ===== Act 节点 =====
+    validation_report: Optional[Dict[str, Any]]  # 閫夋嫨鍣ㄩ獙璇佹姤鍛?
+    validated_selectors: Optional[List[str]]  # 瀹為檯楠岃瘉閫氳繃鐨勯€夋嫨鍣?
+    plan_verification: Optional[Dict[str, Any]]  # 浠ｇ爜璁″垝楠岃瘉缁撴灉
+    dry_run_results: Optional[Dict[str, Any]]  # 骞茶繍琛岀粨鏋?
+    # ===== Act 鑺傜偣 =====
     execution_result: Optional[Dict[str, Any]]
     execution_logs: Optional[List[str]]
     screenshots: Optional[List[str]]
 
-    # ===== Verify 节点 =====
+    # ===== Verify 鑺傜偣 =====
     quality_score: Optional[float]
     sample_data: Optional[List[Dict[str, Any]]]
     quality_issues: Optional[List[str]]
-    quality_stats: Optional[Dict[str, Any]]  # 详细的质量统计信息
-
-    # ===== Report 节点 =====
+    quality_stats: Optional[Dict[str, Any]]  # 璇︾粏鐨勮川閲忕粺璁′俊鎭?
+    # ===== Report 鑺傜偣 =====
     final_report: Optional[Dict[str, Any]]
     markdown_report: Optional[str]
 
-    # ===== SOOAL 循环 =====
+    # ===== SOOAL 寰幆 =====
     sool_iteration: int
     last_error: Optional[str]
     error_history: Optional[List[str]]
 
-    # ===== Reflexion 反思记忆 =====
-    failure_history: Optional[List[Dict[str, Any]]]  # 结构化失败记录
-    reflection_memory: Optional[List[str]]           # 反思文本
-    successful_patterns: Optional[List[str]]         # 成功模式
-    attempt_signatures: Optional[List[str]]          # 代码签名（防重复）
-
+    # ===== Reflexion 鍙嶆€濊蹇?=====
+    failure_history: Optional[List[Dict[str, Any]]]  # 缁撴瀯鍖栧け璐ヨ褰?
+    reflection_memory: Optional[List[str]]           # 鍙嶆€濇枃鏈?
+    successful_patterns: Optional[List[str]]         # 鎴愬姛妯″紡
+    attempt_signatures: Optional[List[str]]          # 浠ｇ爜绛惧悕锛堥槻閲嶅锛?
     # ===== Phase 4: Deep Reflection Memory =====
-    website_type: Optional[str]  # 网站类型分类 (ecommerce/news/social_media/etc.)
-    website_features: Optional[List[str]]  # 网站特征检测
-    domain_insights: Optional[Dict[str, Any]]  # 域名级别的洞察
-    attempted_strategies: Optional[List[str]]  # 尝试过的策略列表
-    partial_success_data: Optional[Dict[str, Any]]  # 部分成功的详细数据
+    website_type: Optional[str]  # 缃戠珯绫诲瀷鍒嗙被 (ecommerce/news/social_media/etc.)
+    website_features: Optional[List[str]]  # 缃戠珯鐗瑰緛妫€娴?
+    domain_insights: Optional[Dict[str, Any]]  # 鍩熷悕绾у埆鐨勬礊瀵?
+    attempted_strategies: Optional[List[str]]  # 灏濊瘯杩囩殑绛栫暐鍒楄〃
+    partial_success_data: Optional[Dict[str, Any]]  # 閮ㄥ垎鎴愬姛鐨勮缁嗘暟鎹?
+    classification_detail: Optional[Dict[str, Any]]
+    navigation_trace: Optional[List[Dict[str, Any]]]
 
     # ===== Vision Integration =====
-    screenshot_data: Optional[bytes]  # 页面截图数据
-    visual_analysis: Optional[Dict[str, Any]]  # 视觉分析结果
+    screenshot_data: Optional[bytes]  # 椤甸潰鎴浘鏁版嵁
+    visual_analysis: Optional[Dict[str, Any]]  # 瑙嗚鍒嗘瀽缁撴灉
 
-    # ===== 性能追踪 =====
-    performance_data: Optional[Dict[str, Any]]  # 各节点性能数据（耗时、状态等）
+    # ===== 鎬ц兘杩借釜 =====
+    performance_data: Optional[Dict[str, Any]]  # 鍚勮妭鐐规€ц兘鏁版嵁锛堣€楁椂銆佺姸鎬佺瓑锛?
+    data_success: Optional[bool]
+    completion_status: Optional[str]
+    failure_reason: Optional[str]
 
-    # ===== 控制 =====
+    # ===== 鎺у埗 =====
     stage: str  # sense/plan/act/verify/reflect/report/done/failed
     error: Optional[str]
 
@@ -273,11 +258,11 @@ def create_initial_state(
     user_goal: str,
     task_id: Optional[str] = None,
 ) -> ReconState:
-    """创建初始状态"""
+    """Create initial agent state."""
     import uuid
 
     return ReconState(
-        # 输入
+        # 杈撳叆
         site_url=site_url,
         user_goal=user_goal,
         task_id=task_id or f"recon_{uuid.uuid4().hex[:8]}",
@@ -331,7 +316,7 @@ def create_initial_state(
         last_error=None,
         error_history=None,
 
-        # Reflexion 反思记忆
+        # Reflexion 鍙嶆€濊蹇?
         failure_history=None,
         reflection_memory=None,
         successful_patterns=None,
@@ -343,109 +328,106 @@ def create_initial_state(
         domain_insights=None,
         attempted_strategies=None,
         partial_success_data=None,
+        classification_detail=None,
+        navigation_trace=[],
 
         # Vision Integration
         screenshot_data=None,
         visual_analysis=None,
+        performance_data={},
+        data_success=None,
+        completion_status=None,
+        failure_reason=None,
 
-        # 控制
+        # 鎺у埗
         stage="sense",
         error=None,
     )
 
 
-# ===== 辅助函数 =====
+# ===== 杈呭姪鍑芥暟 =====
 
 def should_run_sool(state: ReconState) -> str:
-    """判断是否需要 SOOAL 修复
-
-    Returns:
-        "soal" - 执行失败，需要修复
-        "verify" - 执行成功，继续验证
-    """
+    """Determine whether SOOAL repair should run after act."""
     execution_result = state.get("execution_result")
     max_iter = get_max_sool_iterations()
+    generated_code = (state.get("generated_code") or "").strip()
+    plan_verification = state.get("plan_verification") or {}
 
-    # 如果没有执行结果，需要 SOOAL
-    if not execution_result:
+    # No execution result or empty code should always retry repair.
+    if not execution_result or not generated_code:
         return "soal"
 
-    # 执行成功，跳过 SOOAL
+    # Respect verification-before-execution gate.
+    if plan_verification and not plan_verification.get("can_proceed", True):
+        return "soal"
+
     if execution_result.get("success"):
+        parsed_data = execution_result.get("parsed_data")
+        has_data = False
+
+        if isinstance(parsed_data, dict):
+            results = parsed_data.get("results")
+            has_data = isinstance(results, list) and len(results) > 0
+        elif isinstance(parsed_data, list):
+            has_data = len(parsed_data) > 0
+
+        # Treat "code ran but yielded no data" as a repair case unless retries exhausted.
+        if not has_data and state.get("sool_iteration", 0) < max_iter:
+            return "soal"
+
         return "verify"
 
-    # 执行失败，检查迭代次数
     error = execution_result.get("error")
     if error and state.get("sool_iteration", 0) < max_iter:
         return "soal"
 
-    # 超过最大迭代次数，直接验证
     return "verify"
 
 
 def should_retry(state: ReconState) -> str:
-    """判断是否需要重试
-
-    使用可配置的质量阈值和最大迭代次数。
-
-    Returns:
-        "report" - 质量合格或达到最大迭代，生成报告
-        "retry" - 质量不合格且未达到最大迭代，重新生成代码
-    """
+    """Return whether to continue retrying based on quality and retry budget."""
     quality = state.get("quality_score", 0)
     threshold = get_quality_threshold()
     max_iter = get_max_sool_iterations()
 
-    # 质量合格，生成报告
+    # Quality passes threshold: finish.
     if quality >= threshold:
         return "report"
 
-    # 达到最大迭代次数，生成报告
+    # Retry budget exhausted: finish.
     if state.get("sool_iteration", 0) >= max_iter:
         return "report"
 
-    # 质量不合格且未达到最大迭代，重试
+    # Otherwise keep retrying.
     return "retry"
 
 
 def should_reflect(state: ReconState) -> str:
-    """判断是否需要反思（Reflexion模式）
-
-    基于Reflexion论文的Act-Reflect-Remember循环，
-    当数据为空或质量过低时，触发深度反思。
-
-    Returns:
-        "reflect" - 数据为空或质量低，需要反思
-        "report" - 任务完成或达到最大迭代
-    """
+    """Choose reflect vs report based on data presence, quality, and retry budget."""
     sample_data = state.get("sample_data", [])
     quality = state.get("quality_score", 0)
     max_iter = get_max_sool_iterations()
 
-    # 数据为空，必须反思
+    # Empty data must trigger reflection if retries remain.
     if len(sample_data) == 0:
-        # 检查是否达到最大迭代次数
+        # Check retry budget.
         if state.get("sool_iteration", 0) < max_iter:
             return "reflect"
         return "report"
 
-    # 质量过低，反思
+    # Low quality also triggers reflection if retries remain.
     if quality < 0.3:
         if state.get("sool_iteration", 0) < max_iter:
             return "reflect"
         return "report"
 
-    # 质量合格，生成报告
+    # Good enough quality: finish.
     return "report"
 
 
 def should_retry_from_reflection(state: ReconState) -> str:
-    """反思后判断是否重试
-
-    Returns:
-        "retry" - 需要重新生成代码
-        "report" - 放弃重试，生成报告
-    """
+    """After reflection, decide whether to retry or finalize."""
     max_iter = get_max_sool_iterations()
     current_iter = state.get("sool_iteration", 0)
 
@@ -456,29 +438,78 @@ def should_retry_from_reflection(state: ReconState) -> str:
 
 
 def should_interact(state: ReconState) -> str:
-    """判断是否需要交互
-
-    基于 Sense 阶段的分析，判断页面是否需要多步交互。
-
-    Returns:
-        "interact" - 需要交互（如点击搜索按钮）
-        "validate" - 不需要交互，直接进入验证阶段
-    """
+    """Determine whether an interaction/navigation step is needed."""
     sense_analysis = state.get("sense_analysis", {})
-    detected_features = state.get("detected_features", [])
+    detected_features = state.get("detected_features", []) or []
+    user_goal = (state.get("user_goal") or "").lower()
+    site_url = (state.get("site_url") or "").lower()
 
-    # 如果 Sense 分析明确指出需要交互
     if sense_analysis.get("requires_interaction"):
         return "interact"
 
-    # 如果检测到搜索框或提交按钮
+    # If analysis says target data is not on current page, prefer interaction first.
+    if sense_analysis.get("target_data_on_page") is False:
+        return "interact"
+
     for feature in detected_features:
-        if "search" in feature.lower() or "form" in feature.lower():
+        lower = feature.lower()
+        if (
+            "search" in lower
+            or "form" in lower
+            or "pagination" in lower
+            or "filter" in lower
+            or "menu" in lower
+            or "category" in lower
+        ):
             return "interact"
 
-    # 检查 interaction_detected 标志
     if state.get("interaction_detected"):
         return "interact"
 
-    # 默认不需要交互，直接进入验证阶段
+    # Landing pages often require one extra step to reach list/detail pages.
+    if site_url.endswith("/") and any(
+        token in user_goal
+        for token in ["列表", "list", "jobs", "职位", "产品", "商品", "论文", "公告", "chart", "图表", "news", "文章"]
+    ):
+        return "interact"
+
     return "validate"
+
+
+def should_proceed_after_plan_verification(state: ReconState) -> str:
+    """Route from verify_plan to act/soal/report based on gate and retry budget."""
+    generated_code = (state.get("generated_code") or "").strip()
+    verification = state.get("plan_verification") or {}
+    max_iter = get_max_sool_iterations()
+    current_iter = state.get("sool_iteration", 0)
+
+    if not generated_code:
+        if current_iter >= max_iter:
+            return "report"
+        return "soal"
+
+    if not verification:
+        if current_iter >= max_iter:
+            return "report"
+        return "soal"
+
+    if verification.get("can_proceed", False):
+        return "act"
+
+    if current_iter >= max_iter:
+        return "report"
+
+    return "soal"
+
+
+def compute_data_success(state: ReconState) -> bool:
+    """Determine if extracted data is usable for downstream consumers."""
+    sample_data = state.get("sample_data") or []
+    quality_score = state.get("quality_score") or 0.0
+    threshold = get_quality_threshold()
+
+    if not isinstance(sample_data, list) or len(sample_data) == 0:
+        return False
+
+    return quality_score >= threshold
+

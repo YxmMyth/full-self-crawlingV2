@@ -477,7 +477,8 @@ def analyze_partial_success(
             analysis["partial_success"] = True
             analysis["success_rate"] = 0.5
             analysis["strengths"].append(f"Extracted {len(sample_data)} items despite error")
-            analysis["issues"].append(f"Execution failed: {execution_result.get('error', 'Unknown')[:100]}")
+            error_msg = execution_result.get('error') or execution_result.get('stderr', 'Unknown')
+            analysis["issues"].append(f"Execution failed: {(error_msg or 'Unknown')[:100]}")
 
     # Analyze data quality
     if sample_data:

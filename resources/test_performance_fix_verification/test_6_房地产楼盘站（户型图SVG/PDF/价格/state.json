@@ -1,0 +1,404 @@
+{
+  "stage": "done",
+  "quality_score": 0,
+  "sample_data": [],
+  "sool_iteration": 6,
+  "failure_history": [
+    {
+      "iteration": 1,
+      "failure_type": "selector_error",
+      "root_cause": "Zillow是一个重度依赖JavaScript的单页应用（SPA），且使用动态生成的CSS类名（如Styled Components），目标数据（户型图/价格）位于详情页而非主页。爬虫可能未执行必要的导航步骤（搜索->点击列表），或者使用了静态CSS选择器导致无法匹配动态加载的元素，从而返回0条数据。",
+      "suggested_fix": "1. 实现多步导航逻辑：先在首页执行搜索操作，点击进入具体房源详情页。2. 使用更稳健的选择器策略：利用Playwright的 `get_by_text()`, `get_by_role()` 或基于 `data-testid` 等稳定属性的定位方式，避免使用易变的CSS类名。3. 增加显式等待：使用 `page.wait_for_selector()` 或 `page.wait_for_load_state('networkidle')` 确保JavaScript动态内容渲染完成后再提取。",
+      "avoid_repeat": "避免直接在主页抓取详情数据，避免使用脆弱的CSS类选择器，避免在未等待DOM完全加载的情况下进行数据提取。",
+      "data_count": 0,
+      "website_type": "real_estate",
+      "anti_bot_level": "high",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      }
+    },
+    {
+      "iteration": 2,
+      "failure_type": "empty_result",
+      "root_cause": "目标数据（户型图SVG/PDF）在Zillow上通常位于房源详情页的特定交互层（如'Floor plans'标签页或模态框）中，且往往通过独立的XHR/Fetch API异步加载，而非直接存在于初始HTML中。爬虫可能仅停留在列表页或未触发的详情页，导致无法获取这些深度嵌套的动态资源。此外，Zillow主页需要地理位置或搜索关键词才能展示房源，若未提供这些参数，页面可能处于空状态。",
+      "suggested_fix": "1. 直接导航：直接构造并访问具体的房源详情页URL（如/homedetails/...），绕过搜索页的不确定性。2. 网络监听：利用Playwright的`page.wait_for_response()`或`page.on('response')`监听网络请求，拦截包含户型图链接的API响应（通常是JSON格式），这比解析DOM更稳定。3. 交互触发：若必须解析DOM，需模拟点击'Floor plans'按钮，并使用`wait_for_selector('svg')`或`wait_for_load_state('networkidle')`确保资源加载完成。",
+      "avoid_repeat": "避免在没有明确搜索参数的情况下抓取主页，避免在未触发特定交互（如点击标签页）或未监听网络API的情况下尝试提取深度动态加载的资产（SVG/PDF）。",
+      "data_count": 0,
+      "website_type": "real_estate",
+      "anti_bot_level": "high",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      }
+    },
+    {
+      "iteration": 3,
+      "failure_type": "empty_result",
+      "root_cause": "Zillow 的根 URL（`https://www.zillow.com/`）是一个通用的入口页面，默认情况下不包含任何房源列表数据。它需要用户输入位置或重定向。由于爬虫可能访问了根 URL 而没有提供特定的地理位置上下文（例如 URL 路径 `/los-angeles-ca/` 或搜索查询参数），页面仅渲染了搜索栏和页脚。因此，针对房源卡片的任何数据提取逻辑都无法找到元素，导致 0 条结果。此外，Zillow 的高反爬虫系统可能会阻止通用的无头浏览器请求，如果它们缺乏特定的位置意图或指纹，则提供空白的或 'Access Denied' 页面。",
+      "suggested_fix": "1. **直接位置 URL**：直接导航到特定城市的 URL（例如 `https://www.zillow.com/new-york-ny/`），而不是主页。这确保页面直接进入列表视图。2. **搜索参数**：如果需要特定过滤器，使用 Zillow 的查询参数（例如 `?searchQueryState={...}`）。3. **着陆页验证**：在解析之前，添加一个检查以验证 `ul[data-testid=\"search-results\"]` 或类似的列表容器是否存在，以确保我们不在通用的着陆页上。",
+      "avoid_repeat": "避免在没有特定地理位置路径或搜索查询的情况下访问 Zillow 的根 URL。避免假设房源列表会在没有位置上下文的情况下自动加载。",
+      "data_count": 0,
+      "website_type": "real_estate",
+      "anti_bot_level": "high",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      }
+    },
+    {
+      "iteration": 4,
+      "failure_type": "empty_result",
+      "root_cause": "目标数据（户型图SVG/PDF）在Zillow上的呈现形式与预期不符，且反爬虫机制（High级别）可能拦截了请求。Zillow通常不提供直接的SVG或PDF文件下载链接，而是通过JavaScript将户型图渲染为交互式的图像或Canvas元素。爬虫可能在寻找不存在的文件扩展名链接。此外，Zillow的高强度反爬虫系统（可能涉及Akamai或Cloudflare）很容易检测到无头浏览器的特征（如`navigator.webdriver`），导致返回验证码页面或空内容，从而无法提取任何数据。",
+      "suggested_fix": "1. **反爬虫伪装**：使用`playwright-stealth`插件或配置浏览器上下文以隐藏自动化特征（如覆盖`navigator.webdriver`，修改`chrome`对象），模拟真实用户行为。2. **修正数据提取目标**：放弃寻找PDF/SVG链接，转而定位包含户型图的`<img>`标签的`src`属性，或者对特定的DOM容器进行截图保存。3. **直接验证详情页**：直接访问一个已知包含户型图的房源详情页URL（而非搜索列表页），并增加显式等待和反检测验证，确认页面内容完全加载后再进行解析。",
+      "avoid_repeat": "避免假设Zillow提供直接的SVG/PDF下载链接，避免在未实施反检测措施（如stealth模式）的情况下尝试抓取Zillow数据，避免在未确认页面是否被反爬虫拦截（如验证码）的情况下进行数据提取。",
+      "data_count": 0,
+      "website_type": "real_estate",
+      "anti_bot_level": "high",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      }
+    },
+    {
+      "iteration": 5,
+      "failure_type": "empty_result",
+      "root_cause": "Zillow 是一个基于 Next.js 框架的单页应用（SPA），其核心数据（包括价格、房源详情、媒体资源链接）主要通过客户端水合（Client-side Hydration）加载，并且主要存储在页面源码的 `<script id=\"__NEXT_DATA__\" type=\"application/json\">` 标签中，而非直接存在于初始 HTML 的静态 DOM 结构中。爬虫可能尝试使用不稳定的 CSS 选择器（如 CSS Modules 生成的哈希类名）来定位元素，或者在 DOM 完全渲染前就进行了提取，导致选择器匹配失败。此外，户型图数据（Floor Plans）通常仅在房源详情页的特定数据结构中提供，直接抓取根 URL（`https://www.zillow.com/`）或搜索列表页无法获取到具体的户型图资源，因为根页面仅包含搜索入口，而列表页通常不包含详细的户型图数据。",
+      "suggested_fix": "1. **解析 __NEXT_DATA__**：在页面加载完成后，直接提取并解析 `<script id=\"__NEXT_DATA__\">` 标签内的 JSON 内容，从中读取 `props.pageProps` 下的数据。这比解析 DOM 更稳定，且能获取到完整的 API 数据模型。2. **分步导航策略**：首先导航至特定城市的搜索页（如 `/los-angeles-ca/`），从 JSON 数据中提取房源详情页 URL（`homedetails` 路径）；其次，导航至具体的房源详情页，再次解析 `__NEXT_DATA__`，在 `floorPlans` 或 `media` 字段中查找户型图链接。3. **兜底方案**：若 JSON 中无户型图链接，再尝试模拟点击页面上的 'Floor plans' 按钮触发异步加载，并监听网络请求。",
+      "avoid_repeat": "避免使用脆弱的 CSS 类名选择器（如动态哈希类名）从 DOM 中提取 Zillow 数据，避免在未解析嵌入的 JSON 数据结构的情况下尝试获取动态内容，避免在根 URL 上期望找到房源详情数据。",
+      "data_count": 0,
+      "website_type": "real_estate",
+      "anti_bot_level": "high",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      }
+    },
+    {
+      "iteration": 6,
+      "failure_type": "empty_result",
+      "root_cause": "Zillow 的户型图数据采用了严格的懒加载策略，且实际数据格式与预期不符。具体而言，户型图资源通常不会包含在初始页面加载或 `__NEXT_DATA__` 的 JSON 转储中，而是需要用户显式点击页面上的 'Floor plans' 选项卡后，才会触发特定的 GraphQL 异步请求来获取数据。此外，Zillow 几乎不使用 SVG 或 PDF 格式展示户型图，而是使用 JPG/PNG 图片，导致基于文件扩展名（.svg/.pdf）的搜索逻辑完全失效。",
+      "suggested_fix": "1. **交互式触发加载**：在进入房源详情页后，使用 Playwright 定位并点击 'Floor plans' 按钮或标签页。2. **网络监听与等待**：利用 `page.wait_for_response` 或 `page.wait_for_selector` 等待户型图容器（如包含 `img` 标签的特定 div）出现，或直接拦截包含户型图 URL 的 GraphQL 响应。3. **修正数据格式预期**：放弃寻找 SVG/PDF，转而提取 `<img>` 标签的 `src` 属性（通常是 .jpg 或 .png 格式）。4. **价格提取**：价格数据通常在页面加载时即可在 DOM 或 `__NEXT_DATA__` 中获取，可在点击户型图前或后并行提取。",
+      "avoid_repeat": "避免在未点击 'Floor plans' 选项卡的情况下尝试提取户型图数据，避免假设户型图数据存在于初始页面加载中，避免搜索不存在的 SVG/PDF 文件扩展名。",
+      "data_count": 0,
+      "website_type": "real_estate",
+      "anti_bot_level": "high",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      }
+    }
+  ],
+  "reflection_memory": [
+    "```json\n{\n    \"failure_type\": \"selector_error\",\n    \"root_cause\": \"Zillow是一个重度依赖JavaScript的单页应用（SPA），且使用动态生成的CSS类名（如Styled Components），目标数据（户型图/价格）位于详情页而非主页。爬虫可能未执行必要的导航步骤（搜索->点击列表），或者使用了静态CSS选择器导致无法匹配动态加载的元素，从而返回0条数据。\",\n    \"suggested_fix\": \"1. 实现多步导航逻辑：先在首页执行搜索操作，点击进入具体房源详情页。2. 使用更稳健的选择器策略：利用Playwright的 `get_by_text()`, `get_by_role()` 或基于 `data-testid` 等稳定属性的定位方式，避免使用易变的CSS类名。3. 增加显式等待：使用 `page.wait_for_selector()` 或 `page.wait_for_load_state('networkidle')` 确保JavaScript动态内容渲染完成后再提取。\",\n    \"avoid_repeat\": \"避免直接在主页抓取详情数据，避免使用脆弱的CSS类选择器，避免在未等待DOM完全加载的情况下进行数据提取。\"\n}\n```",
+    "```json\n{\n    \"failure_type\": \"empty_result\",\n    \"root_cause\": \"目标数据（户型图SVG/PDF）在Zillow上通常位于房源详情页的特定交互层（如'Floor plans'标签页或模态框）中，且往往通过独立的XHR/Fetch API异步加载，而非直接存在于初始HTML中。爬虫可能仅停留在列表页或未触发的详情页，导致无法获取这些深度嵌套的动态资源。此外，Zillow主页需要地理位置或搜索关键词才能展示房源，若未提供这些参数，页面可能处于空状态。\",\n    \"suggested_fix\": \"1. 直接导航：直接构造并访问具体的房源详情页URL（如/homedetails/...），绕过搜索页的不确定性。2. 网络监听：利用Playwright的`page.wait_for_response()`或`page.on('response')`监听网络请求，拦截包含户型图链接的API响应（通常是JSON格式），这比解析DOM更稳定。3. 交互触发：若必须解析DOM，需模拟点击'Floor plans'按钮，并使用`wait_for_selector('svg')`或`wait_for_load_state('networkidle')`确保资源加载完成。\",\n    \"avoid_repeat\": \"避免在没有明确搜索参数的情况下抓取主页，避免在未触发特定交互（如点击标签页）或未监听网络API的情况下尝试提取深度动态加载的资产（SVG/PDF）。\"\n}\n```",
+    "```json\n{\n    \"failure_type\": \"empty_result\",\n    \"root_cause\": \"Zillow 的根 URL（`https://www.zillow.com/`）是一个通用的入口页面，默认情况下不包含任何房源列表数据。它需要用户输入位置或重定向。由于爬虫可能访问了根 URL 而没有提供特定的地理位置上下文（例如 URL 路径 `/los-angeles-ca/` 或搜索查询参数），页面仅渲染了搜索栏和页脚。因此，针对房源卡片的任何数据提取逻辑都无法找到元素，导致 0 条结果。此外，Zillow 的高反爬虫系统可能会阻止通用的无头浏览器请求，如果它们缺乏特定的位置意图或指纹，则提供空白的或 'Access Denied' 页面。\",\n    \"suggested_fix\": \"1. **直接位置 URL**：直接导航到特定城市的 URL（例如 `https://www.zillow.com/new-york-ny/`），而不是主页。这确保页面直接进入列表视图。2. **搜索参数**：如果需要特定过滤器，使用 Zillow 的查询参数（例如 `?searchQueryState={...}`）。3. **着陆页验证**：在解析之前，添加一个检查以验证 `ul[data-testid=\\\"search-results\\\"]` 或类似的列表容器是否存在，以确保我们不在通用的着陆页上。\",\n    \"avoid_repeat\": \"避免在没有特定地理位置路径或搜索查询的情况下访问 Zillow 的根 URL。避免假设房源列表会在没有位置上下文的情况下自动加载。\"\n}\n```",
+    "```json\n{\n    \"failure_type\": \"empty_result\",\n    \"root_cause\": \"目标数据（户型图SVG/PDF）在Zillow上的呈现形式与预期不符，且反爬虫机制（High级别）可能拦截了请求。Zillow通常不提供直接的SVG或PDF文件下载链接，而是通过JavaScript将户型图渲染为交互式的图像或Canvas元素。爬虫可能在寻找不存在的文件扩展名链接。此外，Zillow的高强度反爬虫系统（可能涉及Akamai或Cloudflare）很容易检测到无头浏览器的特征（如`navigator.webdriver`），导致返回验证码页面或空内容，从而无法提取任何数据。\",\n    \"suggested_fix\": \"1. **反爬虫伪装**：使用`playwright-stealth`插件或配置浏览器上下文以隐藏自动化特征（如覆盖`navigator.webdriver`，修改`chrome`对象），模拟真实用户行为。2. **修正数据提取目标**：放弃寻找PDF/SVG链接，转而定位包含户型图的`<img>`标签的`src`属性，或者对特定的DOM容器进行截图保存。3. **直接验证详情页**：直接访问一个已知包含户型图的房源详情页URL（而非搜索列表页），并增加显式等待和反检测验证，确认页面内容完全加载后再进行解析。\",\n    \"avoid_repeat\": \"避免假设Zillow提供直接的SVG/PDF下载链接，避免在未实施反检测措施（如stealth模式）的情况下尝试抓取Zillow数据，避免在未确认页面是否被反爬虫拦截（如验证码）的情况下进行数据提取。\"\n}\n```",
+    "```json\n{\n    \"failure_type\": \"empty_result\",\n    \"root_cause\": \"Zillow 是一个基于 Next.js 框架的单页应用（SPA），其核心数据（包括价格、房源详情、媒体资源链接）主要通过客户端水合（Client-side Hydration）加载，并且主要存储在页面源码的 `<script id=\\\"__NEXT_DATA__\\\" type=\\\"application/json\\\">` 标签中，而非直接存在于初始 HTML 的静态 DOM 结构中。爬虫可能尝试使用不稳定的 CSS 选择器（如 CSS Modules 生成的哈希类名）来定位元素，或者在 DOM 完全渲染前就进行了提取，导致选择器匹配失败。此外，户型图数据（Floor Plans）通常仅在房源详情页的特定数据结构中提供，直接抓取根 URL（`https://www.zillow.com/`）或搜索列表页无法获取到具体的户型图资源，因为根页面仅包含搜索入口，而列表页通常不包含详细的户型图数据。\",\n    \"suggested_fix\": \"1. **解析 __NEXT_DATA__**：在页面加载完成后，直接提取并解析 `<script id=\\\"__NEXT_DATA__\\\">` 标签内的 JSON 内容，从中读取 `props.pageProps` 下的数据。这比解析 DOM 更稳定，且能获取到完整的 API 数据模型。2. **分步导航策略**：首先导航至特定城市的搜索页（如 `/los-angeles-ca/`），从 JSON 数据中提取房源详情页 URL（`homedetails` 路径）；其次，导航至具体的房源详情页，再次解析 `__NEXT_DATA__`，在 `floorPlans` 或 `media` 字段中查找户型图链接。3. **兜底方案**：若 JSON 中无户型图链接，再尝试模拟点击页面上的 'Floor plans' 按钮触发异步加载，并监听网络请求。\",\n    \"avoid_repeat\": \"避免使用脆弱的 CSS 类名选择器（如动态哈希类名）从 DOM 中提取 Zillow 数据，避免在未解析嵌入的 JSON 数据结构的情况下尝试获取动态内容，避免在根 URL 上期望找到房源详情数据。\"\n}\n```",
+    "```json\n{\n    \"failure_type\": \"empty_result\",\n    \"root_cause\": \"Zillow 的户型图数据采用了严格的懒加载策略，且实际数据格式与预期不符。具体而言，户型图资源通常不会包含在初始页面加载或 `__NEXT_DATA__` 的 JSON 转储中，而是需要用户显式点击页面上的 'Floor plans' 选项卡后，才会触发特定的 GraphQL 异步请求来获取数据。此外，Zillow 几乎不使用 SVG 或 PDF 格式展示户型图，而是使用 JPG/PNG 图片，导致基于文件扩展名（.svg/.pdf）的搜索逻辑完全失效。\",\n    \"suggested_fix\": \"1. **交互式触发加载**：在进入房源详情页后，使用 Playwright 定位并点击 'Floor plans' 按钮或标签页。2. **网络监听与等待**：利用 `page.wait_for_response` 或 `page.wait_for_selector` 等待户型图容器（如包含 `img` 标签的特定 div）出现，或直接拦截包含户型图 URL 的 GraphQL 响应。3. **修正数据格式预期**：放弃寻找 SVG/PDF，转而提取 `<img>` 标签的 `src` 属性（通常是 .jpg 或 .png 格式）。4. **价格提取**：价格数据通常在页面加载时即可在 DOM 或 `__NEXT_DATA__` 中获取，可在点击户型图前或后并行提取。\",\n    \"avoid_repeat\": \"避免在未点击 'Floor plans' 选项卡的情况下尝试提取户型图数据，避免假设户型图数据存在于初始页面加载中，避免搜索不存在的 SVG/PDF 文件扩展名。\"\n}\n```"
+  ],
+  "attempt_signatures": null,
+  "quality_issues": [
+    "Խϵ: 0ֱֶοȱʧ"
+  ],
+  "performance_data": {
+    "sense_start": 1771823670.1193006,
+    "sense_duration": 51.67254686355591,
+    "sense_end": 1771823721.7918475,
+    "sense_status": "success",
+    "sense_calls": 1,
+    "validate_start": 1771823721.7948022,
+    "validate_duration": 47.31858015060425,
+    "validate_end": 1771823769.1133823,
+    "validate_status": "success",
+    "validate_calls": 1,
+    "plan_start": 1771824209.3615906,
+    "plan_duration": 0.0001068115234375,
+    "plan_end": 1771824209.3616974,
+    "plan_status": "success",
+    "plan_calls": 6,
+    "verify_plan_start": 1771824209.362012,
+    "verify_plan_duration": 4.5299530029296875e-06,
+    "verify_plan_end": 1771824209.3620164,
+    "verify_plan_status": "success",
+    "verify_plan_calls": 6,
+    "act_start": 1771824209.3622892,
+    "act_duration": 0.03326010704040527,
+    "act_end": 1771824209.3955493,
+    "act_status": "success",
+    "act_calls": 6,
+    "verify_start": 1771824209.3963227,
+    "verify_duration": 45.846375942230225,
+    "verify_end": 1771824255.2426987,
+    "verify_status": "success",
+    "verify_calls": 6,
+    "reflect_start": 1771824255.2434895,
+    "reflect_duration": 38.25107717514038,
+    "reflect_end": 1771824293.4945667,
+    "reflect_status": "success",
+    "reflect_calls": 6,
+    "report_start": 1771824293.49672,
+    "report_duration": 17.42154097557068,
+    "report_end": 1771824310.918261,
+    "report_status": "success",
+    "report_calls": 1
+  },
+  "agent_result": {
+    "success": true,
+    "agent_id": "agent_b8bfa94a",
+    "site_url": "https://www.zillow.com/",
+    "user_goal": "房地产楼盘站（户型图SVG/PDF/价格）",
+    "report": {
+      "site_url": "https://www.zillow.com/",
+      "user_goal": "房地产楼盘站（户型图SVG/PDF/价格）",
+      "quality_score": 0,
+      "sample_data": [],
+      "generated_code": ""
+    },
+    "markdown_report": "```markdown\n# 网站数据侦察报告\n\n## 站点信息\n- URL: https://www.zillow.com/\n- 用户需求: 房地产楼盘站（户型图SVG/PDF/价格）\n- 侦察时间: 2023-10-27\n\n## 侦察总结\n- 估算数据总量: 未知 (侦察未获取到样本)\n- 样本质量分数: 0/1.0\n- 数据结构化程度: 未知\n\n## 站点特征分析\n- 页面类型: SPA (单页应用) / 动态渲染\n- 分页方式: 无限滚动 / 动态加载\n- 反爬等级: 高\n- 侦察状态: 失败 (迭代6次未获取样本，可能遭遇反爬拦截或渲染超时)\n\n## 真实样本预览\n无样本数据 (本次侦察未返回有效数据)\n\n## 可爬性评估\n- 反爬等级: 高\n- 技术难度: 复杂\n- 推荐策略:\n  1. **渲染环境升级**: Zillow 属于重度 JS 渲染站点，且拥有严格的反爬机制（通常基于 Imperva 或类似 WAF）。需使用无头浏览器配合反指纹插件。\n  2. **逆向分析**: 建议优先对详情页进行抓包分析，户型图 (SVG/PDF) 和价格数据通常通过 GraphQL 接口异步返回，而非直接存在于 HTML 源码中。\n  3. **IP 轮换**: 必须配置高质量的住宅代理 IP 池，避免请求频率过高导致 IP 封禁。\n  4. **分步提取**: \n     - 第一步：通过搜索或列表页获取房源 ID 链接。\n     - 第二步：进入详情页，解析网络请求或页面 JSON 对象获取户型图链接及价格信息。\n```",
+    "generated_code": "",
+    "stage": "done",
+    "final_state": {
+      "stage": "done",
+      "quality_score": 0,
+      "sample_data": [],
+      "sool_iteration": 6,
+      "failure_history": [
+        {
+          "iteration": 1,
+          "failure_type": "selector_error",
+          "root_cause": "Zillow是一个重度依赖JavaScript的单页应用（SPA），且使用动态生成的CSS类名（如Styled Components），目标数据（户型图/价格）位于详情页而非主页。爬虫可能未执行必要的导航步骤（搜索->点击列表），或者使用了静态CSS选择器导致无法匹配动态加载的元素，从而返回0条数据。",
+          "suggested_fix": "1. 实现多步导航逻辑：先在首页执行搜索操作，点击进入具体房源详情页。2. 使用更稳健的选择器策略：利用Playwright的 `get_by_text()`, `get_by_role()` 或基于 `data-testid` 等稳定属性的定位方式，避免使用易变的CSS类名。3. 增加显式等待：使用 `page.wait_for_selector()` 或 `page.wait_for_load_state('networkidle')` 确保JavaScript动态内容渲染完成后再提取。",
+          "avoid_repeat": "避免直接在主页抓取详情数据，避免使用脆弱的CSS类选择器，避免在未等待DOM完全加载的情况下进行数据提取。",
+          "data_count": 0,
+          "website_type": "real_estate",
+          "anti_bot_level": "high",
+          "attempted_strategies": [
+            "validated_selectors"
+          ],
+          "partial_success": {
+            "partial_success": true,
+            "success_rate": 1.0,
+            "issues": [],
+            "strengths": [
+              "Code executed successfully"
+            ],
+            "recommendations": []
+          }
+        },
+        {
+          "iteration": 2,
+          "failure_type": "empty_result",
+          "root_cause": "目标数据（户型图SVG/PDF）在Zillow上通常位于房源详情页的特定交互层（如'Floor plans'标签页或模态框）中，且往往通过独立的XHR/Fetch API异步加载，而非直接存在于初始HTML中。爬虫可能仅停留在列表页或未触发的详情页，导致无法获取这些深度嵌套的动态资源。此外，Zillow主页需要地理位置或搜索关键词才能展示房源，若未提供这些参数，页面可能处于空状态。",
+          "suggested_fix": "1. 直接导航：直接构造并访问具体的房源详情页URL（如/homedetails/...），绕过搜索页的不确定性。2. 网络监听：利用Playwright的`page.wait_for_response()`或`page.on('response')`监听网络请求，拦截包含户型图链接的API响应（通常是JSON格式），这比解析DOM更稳定。3. 交互触发：若必须解析DOM，需模拟点击'Floor plans'按钮，并使用`wait_for_selector('svg')`或`wait_for_load_state('networkidle')`确保资源加载完成。",
+          "avoid_repeat": "避免在没有明确搜索参数的情况下抓取主页，避免在未触发特定交互（如点击标签页）或未监听网络API的情况下尝试提取深度动态加载的资产（SVG/PDF）。",
+          "data_count": 0,
+          "website_type": "real_estate",
+          "anti_bot_level": "high",
+          "attempted_strategies": [
+            "validated_selectors"
+          ],
+          "partial_success": {
+            "partial_success": true,
+            "success_rate": 1.0,
+            "issues": [],
+            "strengths": [
+              "Code executed successfully"
+            ],
+            "recommendations": []
+          }
+        },
+        {
+          "iteration": 3,
+          "failure_type": "empty_result",
+          "root_cause": "Zillow 的根 URL（`https://www.zillow.com/`）是一个通用的入口页面，默认情况下不包含任何房源列表数据。它需要用户输入位置或重定向。由于爬虫可能访问了根 URL 而没有提供特定的地理位置上下文（例如 URL 路径 `/los-angeles-ca/` 或搜索查询参数），页面仅渲染了搜索栏和页脚。因此，针对房源卡片的任何数据提取逻辑都无法找到元素，导致 0 条结果。此外，Zillow 的高反爬虫系统可能会阻止通用的无头浏览器请求，如果它们缺乏特定的位置意图或指纹，则提供空白的或 'Access Denied' 页面。",
+          "suggested_fix": "1. **直接位置 URL**：直接导航到特定城市的 URL（例如 `https://www.zillow.com/new-york-ny/`），而不是主页。这确保页面直接进入列表视图。2. **搜索参数**：如果需要特定过滤器，使用 Zillow 的查询参数（例如 `?searchQueryState={...}`）。3. **着陆页验证**：在解析之前，添加一个检查以验证 `ul[data-testid=\"search-results\"]` 或类似的列表容器是否存在，以确保我们不在通用的着陆页上。",
+          "avoid_repeat": "避免在没有特定地理位置路径或搜索查询的情况下访问 Zillow 的根 URL。避免假设房源列表会在没有位置上下文的情况下自动加载。",
+          "data_count": 0,
+          "website_type": "real_estate",
+          "anti_bot_level": "high",
+          "attempted_strategies": [
+            "validated_selectors"
+          ],
+          "partial_success": {
+            "partial_success": true,
+            "success_rate": 1.0,
+            "issues": [],
+            "strengths": [
+              "Code executed successfully"
+            ],
+            "recommendations": []
+          }
+        },
+        {
+          "iteration": 4,
+          "failure_type": "empty_result",
+          "root_cause": "目标数据（户型图SVG/PDF）在Zillow上的呈现形式与预期不符，且反爬虫机制（High级别）可能拦截了请求。Zillow通常不提供直接的SVG或PDF文件下载链接，而是通过JavaScript将户型图渲染为交互式的图像或Canvas元素。爬虫可能在寻找不存在的文件扩展名链接。此外，Zillow的高强度反爬虫系统（可能涉及Akamai或Cloudflare）很容易检测到无头浏览器的特征（如`navigator.webdriver`），导致返回验证码页面或空内容，从而无法提取任何数据。",
+          "suggested_fix": "1. **反爬虫伪装**：使用`playwright-stealth`插件或配置浏览器上下文以隐藏自动化特征（如覆盖`navigator.webdriver`，修改`chrome`对象），模拟真实用户行为。2. **修正数据提取目标**：放弃寻找PDF/SVG链接，转而定位包含户型图的`<img>`标签的`src`属性，或者对特定的DOM容器进行截图保存。3. **直接验证详情页**：直接访问一个已知包含户型图的房源详情页URL（而非搜索列表页），并增加显式等待和反检测验证，确认页面内容完全加载后再进行解析。",
+          "avoid_repeat": "避免假设Zillow提供直接的SVG/PDF下载链接，避免在未实施反检测措施（如stealth模式）的情况下尝试抓取Zillow数据，避免在未确认页面是否被反爬虫拦截（如验证码）的情况下进行数据提取。",
+          "data_count": 0,
+          "website_type": "real_estate",
+          "anti_bot_level": "high",
+          "attempted_strategies": [
+            "validated_selectors"
+          ],
+          "partial_success": {
+            "partial_success": true,
+            "success_rate": 1.0,
+            "issues": [],
+            "strengths": [
+              "Code executed successfully"
+            ],
+            "recommendations": []
+          }
+        },
+        {
+          "iteration": 5,
+          "failure_type": "empty_result",
+          "root_cause": "Zillow 是一个基于 Next.js 框架的单页应用（SPA），其核心数据（包括价格、房源详情、媒体资源链接）主要通过客户端水合（Client-side Hydration）加载，并且主要存储在页面源码的 `<script id=\"__NEXT_DATA__\" type=\"application/json\">` 标签中，而非直接存在于初始 HTML 的静态 DOM 结构中。爬虫可能尝试使用不稳定的 CSS 选择器（如 CSS Modules 生成的哈希类名）来定位元素，或者在 DOM 完全渲染前就进行了提取，导致选择器匹配失败。此外，户型图数据（Floor Plans）通常仅在房源详情页的特定数据结构中提供，直接抓取根 URL（`https://www.zillow.com/`）或搜索列表页无法获取到具体的户型图资源，因为根页面仅包含搜索入口，而列表页通常不包含详细的户型图数据。",
+          "suggested_fix": "1. **解析 __NEXT_DATA__**：在页面加载完成后，直接提取并解析 `<script id=\"__NEXT_DATA__\">` 标签内的 JSON 内容，从中读取 `props.pageProps` 下的数据。这比解析 DOM 更稳定，且能获取到完整的 API 数据模型。2. **分步导航策略**：首先导航至特定城市的搜索页（如 `/los-angeles-ca/`），从 JSON 数据中提取房源详情页 URL（`homedetails` 路径）；其次，导航至具体的房源详情页，再次解析 `__NEXT_DATA__`，在 `floorPlans` 或 `media` 字段中查找户型图链接。3. **兜底方案**：若 JSON 中无户型图链接，再尝试模拟点击页面上的 'Floor plans' 按钮触发异步加载，并监听网络请求。",
+          "avoid_repeat": "避免使用脆弱的 CSS 类名选择器（如动态哈希类名）从 DOM 中提取 Zillow 数据，避免在未解析嵌入的 JSON 数据结构的情况下尝试获取动态内容，避免在根 URL 上期望找到房源详情数据。",
+          "data_count": 0,
+          "website_type": "real_estate",
+          "anti_bot_level": "high",
+          "attempted_strategies": [
+            "validated_selectors"
+          ],
+          "partial_success": {
+            "partial_success": true,
+            "success_rate": 1.0,
+            "issues": [],
+            "strengths": [
+              "Code executed successfully"
+            ],
+            "recommendations": []
+          }
+        },
+        {
+          "iteration": 6,
+          "failure_type": "empty_result",
+          "root_cause": "Zillow 的户型图数据采用了严格的懒加载策略，且实际数据格式与预期不符。具体而言，户型图资源通常不会包含在初始页面加载或 `__NEXT_DATA__` 的 JSON 转储中，而是需要用户显式点击页面上的 'Floor plans' 选项卡后，才会触发特定的 GraphQL 异步请求来获取数据。此外，Zillow 几乎不使用 SVG 或 PDF 格式展示户型图，而是使用 JPG/PNG 图片，导致基于文件扩展名（.svg/.pdf）的搜索逻辑完全失效。",
+          "suggested_fix": "1. **交互式触发加载**：在进入房源详情页后，使用 Playwright 定位并点击 'Floor plans' 按钮或标签页。2. **网络监听与等待**：利用 `page.wait_for_response` 或 `page.wait_for_selector` 等待户型图容器（如包含 `img` 标签的特定 div）出现，或直接拦截包含户型图 URL 的 GraphQL 响应。3. **修正数据格式预期**：放弃寻找 SVG/PDF，转而提取 `<img>` 标签的 `src` 属性（通常是 .jpg 或 .png 格式）。4. **价格提取**：价格数据通常在页面加载时即可在 DOM 或 `__NEXT_DATA__` 中获取，可在点击户型图前或后并行提取。",
+          "avoid_repeat": "避免在未点击 'Floor plans' 选项卡的情况下尝试提取户型图数据，避免假设户型图数据存在于初始页面加载中，避免搜索不存在的 SVG/PDF 文件扩展名。",
+          "data_count": 0,
+          "website_type": "real_estate",
+          "anti_bot_level": "high",
+          "attempted_strategies": [
+            "validated_selectors"
+          ],
+          "partial_success": {
+            "partial_success": true,
+            "success_rate": 1.0,
+            "issues": [],
+            "strengths": [
+              "Code executed successfully"
+            ],
+            "recommendations": []
+          }
+        }
+      ],
+      "reflection_memory": [
+        "```json\n{\n    \"failure_type\": \"selector_error\",\n    \"root_cause\": \"Zillow是一个重度依赖JavaScript的单页应用（SPA），且使用动态生成的CSS类名（如Styled Components），目标数据（户型图/价格）位于详情页而非主页。爬虫可能未执行必要的导航步骤（搜索->点击列表），或者使用了静态CSS选择器导致无法匹配动态加载的元素，从而返回0条数据。\",\n    \"suggested_fix\": \"1. 实现多步导航逻辑：先在首页执行搜索操作，点击进入具体房源详情页。2. 使用更稳健的选择器策略：利用Playwright的 `get_by_text()`, `get_by_role()` 或基于 `data-testid` 等稳定属性的定位方式，避免使用易变的CSS类名。3. 增加显式等待：使用 `page.wait_for_selector()` 或 `page.wait_for_load_state('networkidle')` 确保JavaScript动态内容渲染完成后再提取。\",\n    \"avoid_repeat\": \"避免直接在主页抓取详情数据，避免使用脆弱的CSS类选择器，避免在未等待DOM完全加载的情况下进行数据提取。\"\n}\n```",
+        "```json\n{\n    \"failure_type\": \"empty_result\",\n    \"root_cause\": \"目标数据（户型图SVG/PDF）在Zillow上通常位于房源详情页的特定交互层（如'Floor plans'标签页或模态框）中，且往往通过独立的XHR/Fetch API异步加载，而非直接存在于初始HTML中。爬虫可能仅停留在列表页或未触发的详情页，导致无法获取这些深度嵌套的动态资源。此外，Zillow主页需要地理位置或搜索关键词才能展示房源，若未提供这些参数，页面可能处于空状态。\",\n    \"suggested_fix\": \"1. 直接导航：直接构造并访问具体的房源详情页URL（如/homedetails/...），绕过搜索页的不确定性。2. 网络监听：利用Playwright的`page.wait_for_response()`或`page.on('response')`监听网络请求，拦截包含户型图链接的API响应（通常是JSON格式），这比解析DOM更稳定。3. 交互触发：若必须解析DOM，需模拟点击'Floor plans'按钮，并使用`wait_for_selector('svg')`或`wait_for_load_state('networkidle')`确保资源加载完成。\",\n    \"avoid_repeat\": \"避免在没有明确搜索参数的情况下抓取主页，避免在未触发特定交互（如点击标签页）或未监听网络API的情况下尝试提取深度动态加载的资产（SVG/PDF）。\"\n}\n```",
+        "```json\n{\n    \"failure_type\": \"empty_result\",\n    \"root_cause\": \"Zillow 的根 URL（`https://www.zillow.com/`）是一个通用的入口页面，默认情况下不包含任何房源列表数据。它需要用户输入位置或重定向。由于爬虫可能访问了根 URL 而没有提供特定的地理位置上下文（例如 URL 路径 `/los-angeles-ca/` 或搜索查询参数），页面仅渲染了搜索栏和页脚。因此，针对房源卡片的任何数据提取逻辑都无法找到元素，导致 0 条结果。此外，Zillow 的高反爬虫系统可能会阻止通用的无头浏览器请求，如果它们缺乏特定的位置意图或指纹，则提供空白的或 'Access Denied' 页面。\",\n    \"suggested_fix\": \"1. **直接位置 URL**：直接导航到特定城市的 URL（例如 `https://www.zillow.com/new-york-ny/`），而不是主页。这确保页面直接进入列表视图。2. **搜索参数**：如果需要特定过滤器，使用 Zillow 的查询参数（例如 `?searchQueryState={...}`）。3. **着陆页验证**：在解析之前，添加一个检查以验证 `ul[data-testid=\\\"search-results\\\"]` 或类似的列表容器是否存在，以确保我们不在通用的着陆页上。\",\n    \"avoid_repeat\": \"避免在没有特定地理位置路径或搜索查询的情况下访问 Zillow 的根 URL。避免假设房源列表会在没有位置上下文的情况下自动加载。\"\n}\n```",
+        "```json\n{\n    \"failure_type\": \"empty_result\",\n    \"root_cause\": \"目标数据（户型图SVG/PDF）在Zillow上的呈现形式与预期不符，且反爬虫机制（High级别）可能拦截了请求。Zillow通常不提供直接的SVG或PDF文件下载链接，而是通过JavaScript将户型图渲染为交互式的图像或Canvas元素。爬虫可能在寻找不存在的文件扩展名链接。此外，Zillow的高强度反爬虫系统（可能涉及Akamai或Cloudflare）很容易检测到无头浏览器的特征（如`navigator.webdriver`），导致返回验证码页面或空内容，从而无法提取任何数据。\",\n    \"suggested_fix\": \"1. **反爬虫伪装**：使用`playwright-stealth`插件或配置浏览器上下文以隐藏自动化特征（如覆盖`navigator.webdriver`，修改`chrome`对象），模拟真实用户行为。2. **修正数据提取目标**：放弃寻找PDF/SVG链接，转而定位包含户型图的`<img>`标签的`src`属性，或者对特定的DOM容器进行截图保存。3. **直接验证详情页**：直接访问一个已知包含户型图的房源详情页URL（而非搜索列表页），并增加显式等待和反检测验证，确认页面内容完全加载后再进行解析。\",\n    \"avoid_repeat\": \"避免假设Zillow提供直接的SVG/PDF下载链接，避免在未实施反检测措施（如stealth模式）的情况下尝试抓取Zillow数据，避免在未确认页面是否被反爬虫拦截（如验证码）的情况下进行数据提取。\"\n}\n```",
+        "```json\n{\n    \"failure_type\": \"empty_result\",\n    \"root_cause\": \"Zillow 是一个基于 Next.js 框架的单页应用（SPA），其核心数据（包括价格、房源详情、媒体资源链接）主要通过客户端水合（Client-side Hydration）加载，并且主要存储在页面源码的 `<script id=\\\"__NEXT_DATA__\\\" type=\\\"application/json\\\">` 标签中，而非直接存在于初始 HTML 的静态 DOM 结构中。爬虫可能尝试使用不稳定的 CSS 选择器（如 CSS Modules 生成的哈希类名）来定位元素，或者在 DOM 完全渲染前就进行了提取，导致选择器匹配失败。此外，户型图数据（Floor Plans）通常仅在房源详情页的特定数据结构中提供，直接抓取根 URL（`https://www.zillow.com/`）或搜索列表页无法获取到具体的户型图资源，因为根页面仅包含搜索入口，而列表页通常不包含详细的户型图数据。\",\n    \"suggested_fix\": \"1. **解析 __NEXT_DATA__**：在页面加载完成后，直接提取并解析 `<script id=\\\"__NEXT_DATA__\\\">` 标签内的 JSON 内容，从中读取 `props.pageProps` 下的数据。这比解析 DOM 更稳定，且能获取到完整的 API 数据模型。2. **分步导航策略**：首先导航至特定城市的搜索页（如 `/los-angeles-ca/`），从 JSON 数据中提取房源详情页 URL（`homedetails` 路径）；其次，导航至具体的房源详情页，再次解析 `__NEXT_DATA__`，在 `floorPlans` 或 `media` 字段中查找户型图链接。3. **兜底方案**：若 JSON 中无户型图链接，再尝试模拟点击页面上的 'Floor plans' 按钮触发异步加载，并监听网络请求。\",\n    \"avoid_repeat\": \"避免使用脆弱的 CSS 类名选择器（如动态哈希类名）从 DOM 中提取 Zillow 数据，避免在未解析嵌入的 JSON 数据结构的情况下尝试获取动态内容，避免在根 URL 上期望找到房源详情数据。\"\n}\n```",
+        "```json\n{\n    \"failure_type\": \"empty_result\",\n    \"root_cause\": \"Zillow 的户型图数据采用了严格的懒加载策略，且实际数据格式与预期不符。具体而言，户型图资源通常不会包含在初始页面加载或 `__NEXT_DATA__` 的 JSON 转储中，而是需要用户显式点击页面上的 'Floor plans' 选项卡后，才会触发特定的 GraphQL 异步请求来获取数据。此外，Zillow 几乎不使用 SVG 或 PDF 格式展示户型图，而是使用 JPG/PNG 图片，导致基于文件扩展名（.svg/.pdf）的搜索逻辑完全失效。\",\n    \"suggested_fix\": \"1. **交互式触发加载**：在进入房源详情页后，使用 Playwright 定位并点击 'Floor plans' 按钮或标签页。2. **网络监听与等待**：利用 `page.wait_for_response` 或 `page.wait_for_selector` 等待户型图容器（如包含 `img` 标签的特定 div）出现，或直接拦截包含户型图 URL 的 GraphQL 响应。3. **修正数据格式预期**：放弃寻找 SVG/PDF，转而提取 `<img>` 标签的 `src` 属性（通常是 .jpg 或 .png 格式）。4. **价格提取**：价格数据通常在页面加载时即可在 DOM 或 `__NEXT_DATA__` 中获取，可在点击户型图前或后并行提取。\",\n    \"avoid_repeat\": \"避免在未点击 'Floor plans' 选项卡的情况下尝试提取户型图数据，避免假设户型图数据存在于初始页面加载中，避免搜索不存在的 SVG/PDF 文件扩展名。\"\n}\n```"
+      ],
+      "attempt_signatures": null,
+      "quality_issues": [
+        "Խϵ: 0ֱֶοȱʧ"
+      ],
+      "performance_data": {
+        "sense_start": 1771823670.1193006,
+        "sense_duration": 51.67254686355591,
+        "sense_end": 1771823721.7918475,
+        "sense_status": "success",
+        "sense_calls": 1,
+        "validate_start": 1771823721.7948022,
+        "validate_duration": 47.31858015060425,
+        "validate_end": 1771823769.1133823,
+        "validate_status": "success",
+        "validate_calls": 1,
+        "plan_start": 1771824209.3615906,
+        "plan_duration": 0.0001068115234375,
+        "plan_end": 1771824209.3616974,
+        "plan_status": "success",
+        "plan_calls": 6,
+        "verify_plan_start": 1771824209.362012,
+        "verify_plan_duration": 4.5299530029296875e-06,
+        "verify_plan_end": 1771824209.3620164,
+        "verify_plan_status": "success",
+        "verify_plan_calls": 6,
+        "act_start": 1771824209.3622892,
+        "act_duration": 0.03326010704040527,
+        "act_end": 1771824209.3955493,
+        "act_status": "success",
+        "act_calls": 6,
+        "verify_start": 1771824209.3963227,
+        "verify_duration": 45.846375942230225,
+        "verify_end": 1771824255.2426987,
+        "verify_status": "success",
+        "verify_calls": 6,
+        "reflect_start": 1771824255.2434895,
+        "reflect_duration": 38.25107717514038,
+        "reflect_end": 1771824293.4945667,
+        "reflect_status": "success",
+        "reflect_calls": 6,
+        "report_start": 1771824293.49672,
+        "report_duration": 17.42154097557068,
+        "report_end": 1771824310.918261,
+        "report_status": "success",
+        "report_calls": 1
+      }
+    }
+  }
+}

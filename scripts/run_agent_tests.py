@@ -132,19 +132,26 @@ async def run_single_task(agent: SiteAgent, task: dict, results_dir: Path, times
         duration = time.time() - start_time
 
         # 分析结果
-        success = result.get("success", False)
+        flow_success = result.get("success", False)
+        data_success = result.get("data_success", False)
         error = result.get("error", "")
-        report = result.get("report", {})
-        final_state = result.get("final_state", {})
+        report = result.get("report") or {}
+        final_state = result.get("final_state") or {}
+        failure_reason = result.get("failure_reason") or final_state.get("failure_reason")
 
         # 获取提取的数据
-        sample_data = report.get("sample_data", []) or final_state.get("sample_data", [])
-        data_count = len(sample_data) if isinstance(sample_data, list) else 0
+        sample_data = report.get("sample_data") or final_state.get("sample_data") or []
+        if not isinstance(sample_data, list):
+            sample_data = []
+        data_count = len(sample_data)
 
         print(f"\n结果:")
-        print(f"  状态: {'✅ 成功' if success else '❌ 失败'}")
+        print(f"  流程状态: {'✅ 成功' if flow_success else '❌ 失败'}")
+        print(f"  数据状态: {'✅ 成功' if data_success else '❌ 失败'}")
         print(f"  耗时: {duration:.1f}秒")
         print(f"  数据量: {data_count}条")
+        if failure_reason:
+            print(f"  失败原因: {failure_reason}")
 
         if error:
             print(f"  错误: {error[:100]}")
@@ -162,10 +169,12 @@ async def run_single_task(agent: SiteAgent, task: dict, results_dir: Path, times
                 "phase": task["phase"],
                 "url": task["url"],
                 "goal": task["goal"],
-                "success": success,
+                "flow_success": flow_success,
+                "data_success": data_success,
                 "duration": round(duration, 1),
                 "data_count": data_count,
                 "error": error[:500] if error else "",
+                "failure_reason": failure_reason,
                 "sample_keys": list(sample_data[0].keys()) if sample_data else [],
             },
             "details": {
@@ -177,6 +186,10 @@ async def run_single_task(agent: SiteAgent, task: dict, results_dir: Path, times
                 "reflection_memory": final_state.get("reflection_memory", []),
                 "attempt_signatures": final_state.get("attempt_signatures", []),
                 "quality_issues": final_state.get("quality_issues", []),
+                "plan_verification": final_state.get("plan_verification", {}),
+                "execution_result": final_state.get("execution_result", {}),
+                "classification_detail": final_state.get("classification_detail", {}),
+                "navigation_trace": final_state.get("navigation_trace", []),
                 "sample_data": sample_data[:5],  # 只保存前5条
             }
         }
@@ -191,10 +204,13 @@ async def run_single_task(agent: SiteAgent, task: dict, results_dir: Path, times
             "task_id": task["id"],
             "task_name": task["name"],
             "phase": task["phase"],
-            "success": success,
+            "success": flow_success,
+            "flow_success": flow_success,
+            "data_success": data_success,
             "duration": round(duration, 1),
             "data_count": data_count,
             "error": error[:200] if error else "",
+            "failure_reason": failure_reason,
             "sample_keys": list(sample_data[0].keys()) if sample_data else [],
             "detail_file": str(detail_file),
         }
@@ -209,6 +225,8 @@ async def run_single_task(agent: SiteAgent, task: dict, results_dir: Path, times
             "task_name": task["name"],
             "phase": task["phase"],
             "success": False,
+            "flow_success": False,
+            "data_success": False,
             "duration": round(duration, 1),
             "data_count": 0,
             "error": error_msg[:200],
@@ -276,12 +294,14 @@ async def main():
     for phase in [1, 2, 3, 4]:
         phase_results = [r for r in all_results if r["phase"] == phase]
         if phase_results:
-            passed = sum(1 for r in phase_results if r["success"])
-            print(f"Phase {phase}: {passed}/{len(phase_results)} 通过")
+            flow_passed = sum(1 for r in phase_results if r.get("flow_success"))
+            data_passed = sum(1 for r in phase_results if r.get("data_success"))
+            print(f"Phase {phase}: 流程 {flow_passed}/{len(phase_results)} | 数据 {data_passed}/{len(phase_results)}")
 
     # 总体
-    passed = sum(1 for r in all_results if r["success"])
-    print(f"\n总计: {passed}/{len(all_results)} 通过 ({passed/len(all_results)*100:.0f}%)")
+    flow_passed = sum(1 for r in all_results if r.get("flow_success"))
+    data_passed = sum(1 for r in all_results if r.get("data_success"))
+    print(f"\n总计: 流程 {flow_passed}/{len(all_results)} | 数据 {data_passed}/{len(all_results)} ({data_passed/len(all_results)*100:.0f}%)")
     print(f"总耗时: {total_duration:.1f}秒")
 
     # 保存汇总结果
@@ -292,8 +312,9 @@ async def main():
             "timestamp": timestamp,
             "total_duration": round(total_duration, 1),
             "total_tasks": len(all_results),
-            "passed_tasks": passed,
-            "pass_rate": round(passed / len(all_results), 2) if all_results else 0,
+            "flow_passed_tasks": flow_passed,
+            "data_passed_tasks": data_passed,
+            "data_pass_rate": round(data_passed / len(all_results), 2) if all_results else 0,
             "results": all_results,
         }, f, ensure_ascii=False, indent=2)
 

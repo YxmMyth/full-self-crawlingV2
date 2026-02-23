@@ -44,6 +44,7 @@ async def verify_plan_node(state: Dict[str, Any]) -> Dict[str, Any]:
             state["plan_verification"] = {
                 "status": "failed",
                 "error": "No code generated for verification",
+                "error_code": "EMPTY_CODE_BLOCKED",
                 "can_proceed": False,
             }
             return state
@@ -61,13 +62,14 @@ async def verify_plan_node(state: Dict[str, Any]) -> Dict[str, Any]:
         dry_run_result = await perform_dry_run(generated_code, state)
 
         # Compile verification report
+        status = determine_status(syntax_check, import_check, structure_check, dry_run_result)
         verification_report = {
-            "status": determine_status(syntax_check, import_check, structure_check, dry_run_result),
+            "status": status,
             "syntax_check": syntax_check,
             "import_check": import_check,
             "structure_check": structure_check,
             "dry_run": dry_run_result,
-            "can_proceed": dry_run_result.get("success", False),
+            "can_proceed": status != "failed",
             "warnings": collect_warnings(syntax_check, import_check, structure_check),
             "recommendations": generate_verification_recommendations(
                 syntax_check, import_check, structure_check, dry_run_result
@@ -83,6 +85,7 @@ async def verify_plan_node(state: Dict[str, Any]) -> Dict[str, Any]:
         state["plan_verification"] = {
             "status": "error",
             "error": str(e),
+            "error_code": "PLAN_VERIFY_ERROR",
             "can_proceed": False,
         }
         state["dry_run_results"] = {"error": str(e)}
@@ -229,7 +232,7 @@ async def perform_dry_run(code: str, state: Dict[str, Any]) -> Dict[str, Any]:
         result = await sandbox.run_python_code(dry_run_code, timeout=30)
 
         return {
-            "success": result["success"],
+            "success": result.get("success", False),
             "output": result.get("output"),
             "error": result.get("error"),
             "stderr": result.get("stderr", ""),

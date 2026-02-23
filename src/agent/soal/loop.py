@@ -20,6 +20,7 @@ from enum import Enum
 from ..diagnose import Diagnoser, Diagnosis
 from ..repair import Repairer, RepairResult
 from ..knowledge import RuntimeKnowledge
+from ..state import get_max_sool_iterations
 
 
 class SOOALMode(Enum):
@@ -72,7 +73,9 @@ class SOOALLoop:
         self.mode = mode
         self.diagnoser = Diagnoser()
         self.repairer = Repairer()
-        self.max_iterations = 2 if mode == SOOALMode.SIMPLIFIED else 6
+        # Use configuration from environment variable, fallback to mode-based defaults
+        max_from_config = get_max_sool_iterations()
+        self.max_iterations = 2 if mode == SOOALMode.SIMPLIFIED else max_from_config
 
     async def run(self, failures: List[Dict], knowledge: RuntimeKnowledge) -> Dict[str, Any]:
         """

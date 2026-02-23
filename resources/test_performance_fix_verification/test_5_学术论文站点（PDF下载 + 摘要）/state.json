@@ -1,0 +1,312 @@
+{
+  "stage": "done",
+  "quality_score": 0,
+  "sample_data": [],
+  "sool_iteration": 6,
+  "failure_history": [
+    {
+      "iteration": 1,
+      "failure_type": "selector_error",
+      "root_cause": "网站被错误地识别为 'social_media' 和 'javascript_heavy' 类型，导致使用了不匹配的选择器策略。arXiv 实际上是一个静态的学术网站，核心内容（摘要和PDF链接）直接存在于 HTML 源码中，无需复杂的 JavaScript 渲染。失败的原因是代码可能使用了通用的社交媒体选择器（如针对动态内容的类名），而未针对 arXiv 特有的 DOM 结构（如 `blockquote.abstract` 或 PDF 的特定链接模式）进行抓取。",
+      "suggested_fix": "1. 更新选择器策略以匹配 arXiv 的静态结构：使用 `css=blockquote.abstract` 提取摘要，使用 `css=a[href*=\"/pdf/\"]` 提取 PDF 下载链接。2. 将页面视为静态内容处理，减少不必要的 JavaScript 等待时间。3. 使用 `page.locator('blockquote.abstract').inner_text()` 和 `page.locator('a[href*=\"/pdf/\"]').get_attribute('href')` 进行精准提取。",
+      "avoid_repeat": "避免盲目依赖自动化的网站分类标签（如 'social_media'）来决定抓取逻辑。在编写爬虫前，应直接检查目标 URL 的实际 HTML 结构，确认内容是静态渲染还是动态加载，从而选择正确的选择器和等待策略。",
+      "data_count": 0,
+      "website_type": "social_media",
+      "anti_bot_level": "medium",
+      "attempted_strategies": [],
+      "partial_success": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      }
+    },
+    {
+      "iteration": 2,
+      "failure_type": "unknown",
+      "root_cause": "",
+      "suggested_fix": "检查错误信息",
+      "data_count": 0
+    },
+    {
+      "iteration": 3,
+      "failure_type": "unknown",
+      "root_cause": "",
+      "suggested_fix": "检查错误信息",
+      "data_count": 0
+    },
+    {
+      "iteration": 4,
+      "failure_type": "selector_error",
+      "root_cause": "爬虫策略持续受到错误的 'social_media' 标签干扰，导致代码可能针对动态内容容器（如社交媒体帖子）而非 arXiv 的静态 DOM 结构进行抓取。arXiv 的核心内容（摘要和 PDF）是静态 HTML 元素，不需要 JavaScript 渲染，当前的代码逻辑未能正确匹配 `blockquote.abstract` 和 PDF 链接的选择器。",
+      "suggested_fix": "1. 强制忽略系统分类，将 URL 视为静态学术页面处理。2. 使用 Playwright 的静态提取方法：摘要使用 `page.locator('blockquote.abstract').inner_text()`，PDF 链接使用 `page.locator('a[href*=\"/pdf/\"]').get_attribute('href')`。3. 移除任何针对 JavaScript 动态加载的等待逻辑，直接访问页面源码。",
+      "avoid_repeat": "避免在爬虫逻辑中盲目信任自动生成的网站类型标签（如 'social_media'）。对于已知域名（如 arxiv.org），应预设特定的解析规则，确保不受通用分类错误的影响。",
+      "data_count": 0,
+      "website_type": "social_media",
+      "anti_bot_level": "medium",
+      "attempted_strategies": [],
+      "partial_success": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      }
+    },
+    {
+      "iteration": 5,
+      "failure_type": "unknown",
+      "root_cause": "",
+      "suggested_fix": "检查错误信息",
+      "data_count": 0
+    },
+    {
+      "iteration": 6,
+      "failure_type": "selector_error",
+      "root_cause": "爬虫策略受到 'social_media' 标签的持续误导，导致选择器错误地定位到了页面的侧边栏（`div.rightcolumn`）或元数据区域，而非核心内容区域（`div.leftcolumn`）。arXiv 的页面布局分为左右两栏，社交媒体爬虫通常倾向于抓取包含作者、时间等元数据的区域（类似社交媒体的个人资料或帖子头部），从而完全忽略了位于左栏中的 `blockquote.abstract` 摘要内容和 PDF 链接。",
+      "suggested_fix": "1. 显式限定内容范围：使用 `page.locator('div.leftcolumn')` 作为根选择器，确保只在主内容区域内查找。2. 在左栏内使用精确选择器：摘要使用 `locator('blockquote.abstract').inner_text()`，PDF链接使用 `locator('a:has-text(\"PDF\")').get_attribute('href')`。3. 完全忽略 `div.rightcolumn` 和页脚元素，防止提取到无关的元数据。",
+      "avoid_repeat": "避免在多栏布局的学术站点上使用通用的社交媒体抓取模板，特别是要防止爬虫将侧边栏元数据误判为主要内容。对于 arXiv，必须强制锁定左栏（leftcolumn）进行数据提取。",
+      "data_count": 0,
+      "website_type": "social_media",
+      "anti_bot_level": "medium",
+      "attempted_strategies": [],
+      "partial_success": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      }
+    }
+  ],
+  "reflection_memory": [
+    "```json\n{\n    \"failure_type\": \"selector_error\",\n    \"root_cause\": \"网站被错误地识别为 'social_media' 和 'javascript_heavy' 类型，导致使用了不匹配的选择器策略。arXiv 实际上是一个静态的学术网站，核心内容（摘要和PDF链接）直接存在于 HTML 源码中，无需复杂的 JavaScript 渲染。失败的原因是代码可能使用了通用的社交媒体选择器（如针对动态内容的类名），而未针对 arXiv 特有的 DOM 结构（如 `blockquote.abstract` 或 PDF 的特定链接模式）进行抓取。\",\n    \"suggested_fix\": \"1. 更新选择器策略以匹配 arXiv 的静态结构：使用 `css=blockquote.abstract` 提取摘要，使用 `css=a[href*=\\\"/pdf/\\\"]` 提取 PDF 下载链接。2. 将页面视为静态内容处理，减少不必要的 JavaScript 等待时间。3. 使用 `page.locator('blockquote.abstract').inner_text()` 和 `page.locator('a[href*=\\\"/pdf/\\\"]').get_attribute('href')` 进行精准提取。\",\n    \"avoid_repeat\": \"避免盲目依赖自动化的网站分类标签（如 'social_media'）来决定抓取逻辑。在编写爬虫前，应直接检查目标 URL 的实际 HTML 结构，确认内容是静态渲染还是动态加载，从而选择正确的选择器和等待策略。\"\n}\n```",
+    "执行失败: ，数据量: 0",
+    "执行失败: ，数据量: 0",
+    "```json\n{\n    \"failure_type\": \"selector_error\",\n    \"root_cause\": \"爬虫策略持续受到错误的 'social_media' 标签干扰，导致代码可能针对动态内容容器（如社交媒体帖子）而非 arXiv 的静态 DOM 结构进行抓取。arXiv 的核心内容（摘要和 PDF）是静态 HTML 元素，不需要 JavaScript 渲染，当前的代码逻辑未能正确匹配 `blockquote.abstract` 和 PDF 链接的选择器。\",\n    \"suggested_fix\": \"1. 强制忽略系统分类，将 URL 视为静态学术页面处理。2. 使用 Playwright 的静态提取方法：摘要使用 `page.locator('blockquote.abstract').inner_text()`，PDF 链接使用 `page.locator('a[href*=\\\"/pdf/\\\"]').get_attribute('href')`。3. 移除任何针对 JavaScript 动态加载的等待逻辑，直接访问页面源码。\",\n    \"avoid_repeat\": \"避免在爬虫逻辑中盲目信任自动生成的网站类型标签（如 'social_media'）。对于已知域名（如 arxiv.org），应预设特定的解析规则，确保不受通用分类错误的影响。\"\n}\n```",
+    "执行失败: ，数据量: 0",
+    "```json\n{\n    \"failure_type\": \"selector_error\",\n    \"root_cause\": \"爬虫策略受到 'social_media' 标签的持续误导，导致选择器错误地定位到了页面的侧边栏（`div.rightcolumn`）或元数据区域，而非核心内容区域（`div.leftcolumn`）。arXiv 的页面布局分为左右两栏，社交媒体爬虫通常倾向于抓取包含作者、时间等元数据的区域（类似社交媒体的个人资料或帖子头部），从而完全忽略了位于左栏中的 `blockquote.abstract` 摘要内容和 PDF 链接。\",\n    \"suggested_fix\": \"1. 显式限定内容范围：使用 `page.locator('div.leftcolumn')` 作为根选择器，确保只在主内容区域内查找。2. 在左栏内使用精确选择器：摘要使用 `locator('blockquote.abstract').inner_text()`，PDF链接使用 `locator('a:has-text(\\\"PDF\\\")').get_attribute('href')`。3. 完全忽略 `div.rightcolumn` 和页脚元素，防止提取到无关的元数据。\",\n    \"avoid_repeat\": \"避免在多栏布局的学术站点上使用通用的社交媒体抓取模板，特别是要防止爬虫将侧边栏元数据误判为主要内容。对于 arXiv，必须强制锁定左栏（leftcolumn）进行数据提取。\"\n}\n```"
+  ],
+  "attempt_signatures": null,
+  "quality_issues": [
+    "Խϵ: 0ֱֶοȱʧ"
+  ],
+  "performance_data": {
+    "sense_start": 1771822413.4521239,
+    "sense_duration": 62.041396617889404,
+    "sense_end": 1771822475.4935205,
+    "sense_status": "success",
+    "sense_calls": 1,
+    "interact_start": 1771822475.4961057,
+    "interact_duration": 44.41267108917236,
+    "interact_end": 1771822519.9087768,
+    "interact_status": "success",
+    "interact_calls": 1,
+    "validate_start": 1771822519.9092865,
+    "validate_duration": 120.20801591873169,
+    "validate_end": 1771822640.1173024,
+    "validate_status": "success",
+    "validate_calls": 1,
+    "plan_start": 1771823504.0238552,
+    "plan_duration": 0.0004317760467529297,
+    "plan_end": 1771823504.024287,
+    "plan_status": "success",
+    "plan_calls": 6,
+    "verify_plan_start": 1771823504.0252938,
+    "verify_plan_duration": 1.4066696166992188e-05,
+    "verify_plan_end": 1771823504.025308,
+    "verify_plan_status": "success",
+    "verify_plan_calls": 6,
+    "act_start": 1771823504.0263798,
+    "act_duration": 0.05865597724914551,
+    "act_end": 1771823504.0850358,
+    "act_status": "success",
+    "act_calls": 6,
+    "verify_start": 1771823504.0857723,
+    "verify_duration": 81.93596625328064,
+    "verify_end": 1771823586.0217385,
+    "verify_status": "success",
+    "verify_calls": 6,
+    "reflect_start": 1771823586.0225022,
+    "reflect_duration": 56.45019054412842,
+    "reflect_end": 1771823642.4726927,
+    "reflect_status": "success",
+    "reflect_calls": 6,
+    "report_start": 1771823642.4750774,
+    "report_duration": 25.54019856452942,
+    "report_end": 1771823668.015276,
+    "report_status": "success",
+    "report_calls": 1
+  },
+  "agent_result": {
+    "success": true,
+    "agent_id": "agent_5f0f814f",
+    "site_url": "https://arxiv.org/list/cs/recent",
+    "user_goal": "学术论文站点（PDF下载 + 摘要）",
+    "report": {
+      "site_url": "https://arxiv.org/abs/2602.18435",
+      "user_goal": "学术论文站点（PDF下载 + 摘要）",
+      "quality_score": 0,
+      "sample_data": [],
+      "generated_code": ""
+    },
+    "markdown_report": "```markdown\n# 网站数据侦察报告\n\n## 站点信息\n- URL: https://arxiv.org/abs/2602.18435\n- 用户需求: 学术论文站点（PDF下载 + 摘要）\n- 侦察时间: 2026-02-24 (基于URL ID推算)\n\n## 侦察总结\n- 估算数据总量: 单条记录 (详情页)\n- 样本质量分数: 0/1.0 (基于输入数据)\n- 数据结构化程度: 高 (HTML结构标准，元数据清晰)\n\n## 站点特征分析\n- 页面类型: 学术论文详情页\n- 分页方式: 无 (单页内容)\n- 反爬等级: 低\n- 数据更新: 实时 (基于ID访问)\n\n## 真实样本预览\n> 注：由于输入样本数据为空，以下为基于目标 URL 结构生成的预期数据样本示例：\n\n```json\n{\n  \"title\": \"Sample Paper Title (Corresponding to ID 2602.18435)\",\n  \"authors\": [\"Author A\", \"Author B\", \"Author C\"],\n  \"submit_date\": \"2026-02-XX\",\n  \"abstract\": \"This is the full text of the abstract extracted from the blockquote element...\",\n  \"categories\": [\"cs.AI\", \"cs.LG\"],\n  \"pdf_url\": \"https://arxiv.org/pdf/2602.18435.pdf\",\n  \"doi\": \"10.XXXX/XXXX\",\n  \"comments\": \"8 pages, 4 figures\"\n}\n```\n\n## 可爬性评估\n- 反爬等级: 低\n- 技术难度: 简单\n- 推荐策略: \n  1. **API优先**: 强烈推荐使用 arXiv 官方 API (`export.arxiv.org/api/query`) 获取元数据，比解析 HTML 更稳定。\n  2. **PDF下载**: 直接构造 URL 规则，将 `/abs/` 替换为 `/pdf/` 即可获取 PDF 链接。\n  3. **HTML解析**: 若需解析网页，使用 `BeautifulSoup` 或 `lxml`，定位 CSS 选择器 `.abstract mathjax` (摘要) 和 `h1.title mathjax` (标题)。\n  4. **速率限制**: 即使反爬低，也请设置请求间隔（如 1-2 秒），遵守 `robots.txt`。\n```",
+    "generated_code": "",
+    "stage": "done",
+    "final_state": {
+      "stage": "done",
+      "quality_score": 0,
+      "sample_data": [],
+      "sool_iteration": 6,
+      "failure_history": [
+        {
+          "iteration": 1,
+          "failure_type": "selector_error",
+          "root_cause": "网站被错误地识别为 'social_media' 和 'javascript_heavy' 类型，导致使用了不匹配的选择器策略。arXiv 实际上是一个静态的学术网站，核心内容（摘要和PDF链接）直接存在于 HTML 源码中，无需复杂的 JavaScript 渲染。失败的原因是代码可能使用了通用的社交媒体选择器（如针对动态内容的类名），而未针对 arXiv 特有的 DOM 结构（如 `blockquote.abstract` 或 PDF 的特定链接模式）进行抓取。",
+          "suggested_fix": "1. 更新选择器策略以匹配 arXiv 的静态结构：使用 `css=blockquote.abstract` 提取摘要，使用 `css=a[href*=\"/pdf/\"]` 提取 PDF 下载链接。2. 将页面视为静态内容处理，减少不必要的 JavaScript 等待时间。3. 使用 `page.locator('blockquote.abstract').inner_text()` 和 `page.locator('a[href*=\"/pdf/\"]').get_attribute('href')` 进行精准提取。",
+          "avoid_repeat": "避免盲目依赖自动化的网站分类标签（如 'social_media'）来决定抓取逻辑。在编写爬虫前，应直接检查目标 URL 的实际 HTML 结构，确认内容是静态渲染还是动态加载，从而选择正确的选择器和等待策略。",
+          "data_count": 0,
+          "website_type": "social_media",
+          "anti_bot_level": "medium",
+          "attempted_strategies": [],
+          "partial_success": {
+            "partial_success": true,
+            "success_rate": 1.0,
+            "issues": [],
+            "strengths": [
+              "Code executed successfully"
+            ],
+            "recommendations": []
+          }
+        },
+        {
+          "iteration": 2,
+          "failure_type": "unknown",
+          "root_cause": "",
+          "suggested_fix": "检查错误信息",
+          "data_count": 0
+        },
+        {
+          "iteration": 3,
+          "failure_type": "unknown",
+          "root_cause": "",
+          "suggested_fix": "检查错误信息",
+          "data_count": 0
+        },
+        {
+          "iteration": 4,
+          "failure_type": "selector_error",
+          "root_cause": "爬虫策略持续受到错误的 'social_media' 标签干扰，导致代码可能针对动态内容容器（如社交媒体帖子）而非 arXiv 的静态 DOM 结构进行抓取。arXiv 的核心内容（摘要和 PDF）是静态 HTML 元素，不需要 JavaScript 渲染，当前的代码逻辑未能正确匹配 `blockquote.abstract` 和 PDF 链接的选择器。",
+          "suggested_fix": "1. 强制忽略系统分类，将 URL 视为静态学术页面处理。2. 使用 Playwright 的静态提取方法：摘要使用 `page.locator('blockquote.abstract').inner_text()`，PDF 链接使用 `page.locator('a[href*=\"/pdf/\"]').get_attribute('href')`。3. 移除任何针对 JavaScript 动态加载的等待逻辑，直接访问页面源码。",
+          "avoid_repeat": "避免在爬虫逻辑中盲目信任自动生成的网站类型标签（如 'social_media'）。对于已知域名（如 arxiv.org），应预设特定的解析规则，确保不受通用分类错误的影响。",
+          "data_count": 0,
+          "website_type": "social_media",
+          "anti_bot_level": "medium",
+          "attempted_strategies": [],
+          "partial_success": {
+            "partial_success": true,
+            "success_rate": 1.0,
+            "issues": [],
+            "strengths": [
+              "Code executed successfully"
+            ],
+            "recommendations": []
+          }
+        },
+        {
+          "iteration": 5,
+          "failure_type": "unknown",
+          "root_cause": "",
+          "suggested_fix": "检查错误信息",
+          "data_count": 0
+        },
+        {
+          "iteration": 6,
+          "failure_type": "selector_error",
+          "root_cause": "爬虫策略受到 'social_media' 标签的持续误导，导致选择器错误地定位到了页面的侧边栏（`div.rightcolumn`）或元数据区域，而非核心内容区域（`div.leftcolumn`）。arXiv 的页面布局分为左右两栏，社交媒体爬虫通常倾向于抓取包含作者、时间等元数据的区域（类似社交媒体的个人资料或帖子头部），从而完全忽略了位于左栏中的 `blockquote.abstract` 摘要内容和 PDF 链接。",
+          "suggested_fix": "1. 显式限定内容范围：使用 `page.locator('div.leftcolumn')` 作为根选择器，确保只在主内容区域内查找。2. 在左栏内使用精确选择器：摘要使用 `locator('blockquote.abstract').inner_text()`，PDF链接使用 `locator('a:has-text(\"PDF\")').get_attribute('href')`。3. 完全忽略 `div.rightcolumn` 和页脚元素，防止提取到无关的元数据。",
+          "avoid_repeat": "避免在多栏布局的学术站点上使用通用的社交媒体抓取模板，特别是要防止爬虫将侧边栏元数据误判为主要内容。对于 arXiv，必须强制锁定左栏（leftcolumn）进行数据提取。",
+          "data_count": 0,
+          "website_type": "social_media",
+          "anti_bot_level": "medium",
+          "attempted_strategies": [],
+          "partial_success": {
+            "partial_success": true,
+            "success_rate": 1.0,
+            "issues": [],
+            "strengths": [
+              "Code executed successfully"
+            ],
+            "recommendations": []
+          }
+        }
+      ],
+      "reflection_memory": [
+        "```json\n{\n    \"failure_type\": \"selector_error\",\n    \"root_cause\": \"网站被错误地识别为 'social_media' 和 'javascript_heavy' 类型，导致使用了不匹配的选择器策略。arXiv 实际上是一个静态的学术网站，核心内容（摘要和PDF链接）直接存在于 HTML 源码中，无需复杂的 JavaScript 渲染。失败的原因是代码可能使用了通用的社交媒体选择器（如针对动态内容的类名），而未针对 arXiv 特有的 DOM 结构（如 `blockquote.abstract` 或 PDF 的特定链接模式）进行抓取。\",\n    \"suggested_fix\": \"1. 更新选择器策略以匹配 arXiv 的静态结构：使用 `css=blockquote.abstract` 提取摘要，使用 `css=a[href*=\\\"/pdf/\\\"]` 提取 PDF 下载链接。2. 将页面视为静态内容处理，减少不必要的 JavaScript 等待时间。3. 使用 `page.locator('blockquote.abstract').inner_text()` 和 `page.locator('a[href*=\\\"/pdf/\\\"]').get_attribute('href')` 进行精准提取。\",\n    \"avoid_repeat\": \"避免盲目依赖自动化的网站分类标签（如 'social_media'）来决定抓取逻辑。在编写爬虫前，应直接检查目标 URL 的实际 HTML 结构，确认内容是静态渲染还是动态加载，从而选择正确的选择器和等待策略。\"\n}\n```",
+        "执行失败: ，数据量: 0",
+        "执行失败: ，数据量: 0",
+        "```json\n{\n    \"failure_type\": \"selector_error\",\n    \"root_cause\": \"爬虫策略持续受到错误的 'social_media' 标签干扰，导致代码可能针对动态内容容器（如社交媒体帖子）而非 arXiv 的静态 DOM 结构进行抓取。arXiv 的核心内容（摘要和 PDF）是静态 HTML 元素，不需要 JavaScript 渲染，当前的代码逻辑未能正确匹配 `blockquote.abstract` 和 PDF 链接的选择器。\",\n    \"suggested_fix\": \"1. 强制忽略系统分类，将 URL 视为静态学术页面处理。2. 使用 Playwright 的静态提取方法：摘要使用 `page.locator('blockquote.abstract').inner_text()`，PDF 链接使用 `page.locator('a[href*=\\\"/pdf/\\\"]').get_attribute('href')`。3. 移除任何针对 JavaScript 动态加载的等待逻辑，直接访问页面源码。\",\n    \"avoid_repeat\": \"避免在爬虫逻辑中盲目信任自动生成的网站类型标签（如 'social_media'）。对于已知域名（如 arxiv.org），应预设特定的解析规则，确保不受通用分类错误的影响。\"\n}\n```",
+        "执行失败: ，数据量: 0",
+        "```json\n{\n    \"failure_type\": \"selector_error\",\n    \"root_cause\": \"爬虫策略受到 'social_media' 标签的持续误导，导致选择器错误地定位到了页面的侧边栏（`div.rightcolumn`）或元数据区域，而非核心内容区域（`div.leftcolumn`）。arXiv 的页面布局分为左右两栏，社交媒体爬虫通常倾向于抓取包含作者、时间等元数据的区域（类似社交媒体的个人资料或帖子头部），从而完全忽略了位于左栏中的 `blockquote.abstract` 摘要内容和 PDF 链接。\",\n    \"suggested_fix\": \"1. 显式限定内容范围：使用 `page.locator('div.leftcolumn')` 作为根选择器，确保只在主内容区域内查找。2. 在左栏内使用精确选择器：摘要使用 `locator('blockquote.abstract').inner_text()`，PDF链接使用 `locator('a:has-text(\\\"PDF\\\")').get_attribute('href')`。3. 完全忽略 `div.rightcolumn` 和页脚元素，防止提取到无关的元数据。\",\n    \"avoid_repeat\": \"避免在多栏布局的学术站点上使用通用的社交媒体抓取模板，特别是要防止爬虫将侧边栏元数据误判为主要内容。对于 arXiv，必须强制锁定左栏（leftcolumn）进行数据提取。\"\n}\n```"
+      ],
+      "attempt_signatures": null,
+      "quality_issues": [
+        "Խϵ: 0ֱֶοȱʧ"
+      ],
+      "performance_data": {
+        "sense_start": 1771822413.4521239,
+        "sense_duration": 62.041396617889404,
+        "sense_end": 1771822475.4935205,
+        "sense_status": "success",
+        "sense_calls": 1,
+        "interact_start": 1771822475.4961057,
+        "interact_duration": 44.41267108917236,
+        "interact_end": 1771822519.9087768,
+        "interact_status": "success",
+        "interact_calls": 1,
+        "validate_start": 1771822519.9092865,
+        "validate_duration": 120.20801591873169,
+        "validate_end": 1771822640.1173024,
+        "validate_status": "success",
+        "validate_calls": 1,
+        "plan_start": 1771823504.0238552,
+        "plan_duration": 0.0004317760467529297,
+        "plan_end": 1771823504.024287,
+        "plan_status": "success",
+        "plan_calls": 6,
+        "verify_plan_start": 1771823504.0252938,
+        "verify_plan_duration": 1.4066696166992188e-05,
+        "verify_plan_end": 1771823504.025308,
+        "verify_plan_status": "success",
+        "verify_plan_calls": 6,
+        "act_start": 1771823504.0263798,
+        "act_duration": 0.05865597724914551,
+        "act_end": 1771823504.0850358,
+        "act_status": "success",
+        "act_calls": 6,
+        "verify_start": 1771823504.0857723,
+        "verify_duration": 81.93596625328064,
+        "verify_end": 1771823586.0217385,
+        "verify_status": "success",
+        "verify_calls": 6,
+        "reflect_start": 1771823586.0225022,
+        "reflect_duration": 56.45019054412842,
+        "reflect_end": 1771823642.4726927,
+        "reflect_status": "success",
+        "reflect_calls": 6,
+        "report_start": 1771823642.4750774,
+        "report_duration": 25.54019856452942,
+        "report_end": 1771823668.015276,
+        "report_status": "success",
+        "report_calls": 1
+      }
+    }
+  }
+}

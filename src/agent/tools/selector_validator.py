@@ -56,10 +56,10 @@ class SelectorValidator:
 
                 # 如果是链接，提取 href
                 if el.name == 'a':
-                    sample["href"] = el.get("href", "")[:200]
+                    sample["href"] = (el.get("href") or "")[:200]
                 # 如果是图片，提取 src
                 elif el.name == 'img':
-                    sample["src"] = el.get("src", "")[:200]
+                    sample["src"] = (el.get("src") or "")[:200]
 
                 samples.append(sample)
 
@@ -359,7 +359,7 @@ for selector in selectors:
             "text": el.get_text(strip=True)[:50],
         }}
         if el.name == "a":
-            sample["href"] = el.get("href", "")[:100]
+            sample["href"] = (el.get("href") or "")[:100]
         samples.append(sample)
 
     results.append({{

@@ -184,6 +184,56 @@ class SiteClassifier:
         ],
     }
 
+    # Feature weights reduce false positives from overly common terms.
+    FEATURE_WEIGHTS = {
+        WebsiteType.ECOMMERCE: {
+            "add to cart": 3.0,
+            "buy now": 3.0,
+            "price": 1.0,
+            "product": 1.2,
+            "shipping": 1.5,
+            "checkout": 2.0,
+            "wishlist": 1.5,
+            "review": 0.8,
+        },
+        WebsiteType.NEWS: {
+            "article": 1.2,
+            "breaking news": 2.0,
+            "editorial": 1.8,
+            "journalist": 1.8,
+            "published": 1.2,
+            "byline": 1.6,
+            "comment": 0.4,
+        },
+        WebsiteType.SOCIAL_MEDIA: {
+            "follow": 1.0,
+            "like": 0.6,
+            "share": 0.6,
+            "comment": 0.4,
+            "profile": 1.2,
+            "message": 1.0,
+            "friend": 1.2,
+            "post": 0.8,
+        },
+        WebsiteType.JOB_BOARD: {
+            "apply": 1.6,
+            "job": 1.8,
+            "resume": 1.8,
+            "salary": 1.6,
+            "employer": 1.2,
+            "candidate": 1.2,
+            "interview": 1.2,
+        },
+        WebsiteType.BLOG: {
+            "blog": 2.0,
+            "post": 1.0,
+            "author": 1.2,
+            "comment": 0.4,
+            "subscribe": 1.0,
+            "rss": 1.5,
+        },
+    }
+
     @classmethod
     def classify_from_url(cls, url: str) -> Tuple[WebsiteType, float]:
         """
@@ -197,6 +247,17 @@ class SiteClassifier:
         """
         parsed = urlparse(url)
         domain = parsed.netloc.lower()
+        path = parsed.path.lower()
+
+        # High precision domain/path rules first (avoid obvious misclassification).
+        if "arxiv.org" in domain:
+            return WebsiteType.EDUCATION, 0.95
+        if "datawrapper" in domain:
+            return WebsiteType.CORPORATE, 0.9
+        if "finance.yahoo.com" in domain or (domain.endswith("yahoo.com") and "/quote/" in path):
+            return WebsiteType.NEWS, 0.9
+        if "linkedin.com" in domain and ("/jobs" in path or "/job/" in path):
+            return WebsiteType.JOB_BOARD, 0.95
 
         # Check against known domain patterns
         for site_type, patterns in cls.DOMAIN_PATTERNS.items():
@@ -205,7 +266,6 @@ class SiteClassifier:
                     return site_type, 0.9
 
         # Check URL path patterns
-        path = parsed.path.lower()
 
         if "/product" in path or "/item" in path or "/shop" in path:
             return WebsiteType.ECOMMERCE, 0.7
@@ -225,6 +285,9 @@ class SiteClassifier:
         if "/property" in path or "/home" in path or "/real-estate" in path:
             return WebsiteType.REAL_ESTATE, 0.7
 
+        if "/chart" in path or "/quote" in path or "/ticker" in path:
+            return WebsiteType.NEWS, 0.6
+
         return WebsiteType.UNKNOWN, 0.0
 
     @classmethod
@@ -238,17 +301,32 @@ class SiteClassifier:
         Returns:
             Classification result with type and confidence
         """
-        html_lower = html.lower()
+        html_lower = html.lower() if html else ""
+        if not html_lower:
+            return {
+                "type": WebsiteType.UNKNOWN.value,
+                "confidence": 0.0,
+                "scores": {},
+            }
 
         scores = {}
 
         # Score based on feature patterns
         for site_type, features in cls.FEATURE_PATTERNS.items():
-            score = 0
+            score = 0.0
+            weights = cls.FEATURE_WEIGHTS.get(site_type, {})
             for feature in features:
-                # Count occurrences
-                count = html_lower.count(feature)
-                score += count
+                # Regex with word boundary is less noisy than naive substring count.
+                pattern = r"\b" + re.escape(feature) + r"\b"
+                count = len(re.findall(pattern, html_lower))
+                weighted = min(3, count) * float(weights.get(feature, 1.0))
+                score += weighted
+
+            # Light structural hints
+            if site_type == WebsiteType.NEWS:
+                score += min(3, html_lower.count("<article")) * 0.8
+            elif site_type == WebsiteType.JOB_BOARD:
+                score += min(3, html_lower.count("job-card")) * 1.2
 
             if score > 0:
                 scores[site_type] = score
@@ -257,14 +335,16 @@ class SiteClassifier:
         if scores:
             max_type = max(scores, key=scores.get)
             max_score = scores[max_type]
+            total_score = sum(scores.values())
+            dominance = max_score / total_score if total_score > 0 else 0.0
 
-            # Normalize confidence based on score
-            confidence = min(1.0, max_score / 100)
+            # Confidence favors both absolute strength and class dominance.
+            confidence = min(0.95, 0.2 + min(max_score, 12) * 0.04 + dominance * 0.4)
 
             return {
                 "type": max_type.value,
-                "confidence": confidence,
-                "scores": {k.value: v for k, v in scores.items()},
+                "confidence": round(confidence, 2),
+                "scores": {k.value: round(v, 2) for k, v in scores.items()},
             }
 
         return {
@@ -293,49 +373,90 @@ class SiteClassifier:
             html_result = cls.classify_from_html(html)
             html_type = WebsiteType(html_result["type"])
             html_confidence = html_result["confidence"]
+            scores = html_result.get("scores", {})
 
             # Combine results
             if url_type == WebsiteType.UNKNOWN:
+                if html_confidence < 0.5:
+                    return {
+                        "type": WebsiteType.UNKNOWN.value,
+                        "confidence": round(html_confidence, 2),
+                        "method": "html_low_confidence",
+                        "alternative": html_type.value if html_type != WebsiteType.UNKNOWN else None,
+                        "url_confidence": round(url_confidence, 2),
+                        "html_confidence": round(html_confidence, 2),
+                        "scores": scores,
+                    }
                 return {
                     "type": html_type.value,
-                    "confidence": html_confidence,
+                    "confidence": round(html_confidence, 2),
                     "method": "html_only",
+                    "url_confidence": round(url_confidence, 2),
+                    "html_confidence": round(html_confidence, 2),
+                    "scores": scores,
                 }
 
             if html_type == WebsiteType.UNKNOWN:
                 return {
                     "type": url_type.value,
-                    "confidence": url_confidence,
+                    "confidence": round(url_confidence, 2),
                     "method": "url_only",
+                    "url_confidence": round(url_confidence, 2),
+                    "html_confidence": round(html_confidence, 2),
+                    "scores": scores,
                 }
 
             # If both agree, high confidence
             if url_type == html_type:
                 return {
                     "type": url_type.value,
-                    "confidence": max(url_confidence, html_confidence),
+                    "confidence": round(max(url_confidence, html_confidence), 2),
                     "method": "combined_agreement",
+                    "url_confidence": round(url_confidence, 2),
+                    "html_confidence": round(html_confidence, 2),
+                    "scores": scores,
+                }
+
+            # If they disagree and confidence is close, avoid overfitting to wrong type.
+            if abs(url_confidence - html_confidence) <= 0.15 and max(url_confidence, html_confidence) < 0.85:
+                return {
+                    "type": WebsiteType.UNKNOWN.value,
+                    "confidence": round(max(url_confidence, html_confidence) * 0.7, 2),
+                    "method": "conflict_low_confidence",
+                    "alternative": {
+                        "url": url_type.value,
+                        "html": html_type.value,
+                    },
+                    "url_confidence": round(url_confidence, 2),
+                    "html_confidence": round(html_confidence, 2),
+                    "scores": scores,
                 }
 
             # If they disagree, use higher confidence
-            if url_confidence > html_confidence:
+            if url_confidence >= html_confidence:
                 return {
                     "type": url_type.value,
-                    "confidence": url_confidence * 0.8,  # Reduce confidence on disagreement
+                    "confidence": round(url_confidence * 0.8, 2),  # Reduce confidence on disagreement
                     "method": "url_primary",
                     "alternative": html_type.value,
+                    "url_confidence": round(url_confidence, 2),
+                    "html_confidence": round(html_confidence, 2),
+                    "scores": scores,
                 }
             else:
                 return {
                     "type": html_type.value,
-                    "confidence": html_confidence * 0.8,
+                    "confidence": round(html_confidence * 0.8, 2),
                     "method": "html_primary",
                     "alternative": url_type.value,
+                    "url_confidence": round(url_confidence, 2),
+                    "html_confidence": round(html_confidence, 2),
+                    "scores": scores,
                 }
         else:
             return {
                 "type": url_type.value,
-                "confidence": url_confidence,
+                "confidence": round(url_confidence, 2),
                 "method": "url_only",
             }
 

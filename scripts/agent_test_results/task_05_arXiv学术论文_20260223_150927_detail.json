@@ -1,0 +1,31 @@
+{
+  "summary": {
+    "task_id": 5,
+    "task_name": "arXiv学术论文",
+    "phase": 1,
+    "url": "https://arxiv.org/list/cs/recent",
+    "goal": "提取AI/CS论文列表，包括标题、作者、摘要、PDF链接",
+    "flow_success": false,
+    "data_success": false,
+    "duration": 246.4,
+    "data_count": 0,
+    "error": "Recursion limit of 10000 reached without hitting a stop condition. You can increase the limit by setting the `recursion_limit` config key.\nFor troubleshooting, visit: https://docs.langchain.com/oss/python/langgraph/errors/GRAPH_RECURSION_LIMIT",
+    "failure_reason": "AGENT_RUNTIME_ERROR",
+    "sample_keys": []
+  },
+  "details": {
+    "generated_code": "",
+    "markdown_report": "",
+    "quality_score": 0,
+    "sool_iteration": 0,
+    "failure_history": [],
+    "reflection_memory": [],
+    "attempt_signatures": [],
+    "quality_issues": [],
+    "plan_verification": {},
+    "execution_result": {},
+    "classification_detail": {},
+    "navigation_trace": [],
+    "sample_data": []
+  }
+}

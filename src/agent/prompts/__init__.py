@@ -1622,9 +1622,9 @@ for block in html_blocks[:5]:
             memory_section += f"""
 ### 尝试 #{i}
 - 失败类型: {fail.get('failure_type', 'unknown')}
-- 原因: {fail.get('root_cause', 'unknown')[:200]}
+- 原因: {(fail.get('root_cause') or 'unknown')[:200]}
 - 数据量: {fail.get('data_count', 0)}条
-- 建议: {fail.get('suggested_fix', '无')[:200]}
+- 建议: {(fail.get('suggested_fix') or '无')[:200]}
 """
 
     if reflection_memory:

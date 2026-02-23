@@ -1,6 +1,6 @@
 {
   "stage": "done",
-  "quality_score": 0.0,
+  "quality_score": 0,
   "sample_data": [],
   "sool_iteration": 6,
   "failure_history": [
@@ -10,73 +10,35 @@
       "root_cause": "'NoneType' object is not subscriptable",
       "suggested_fix": "检查错误信息",
       "data_count": 0
-    },
-    {
-      "iteration": 2,
-      "failure_type": "unknown",
-      "root_cause": "Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429",
-      "suggested_fix": "检查错误信息",
-      "data_count": 0
-    },
-    {
-      "iteration": 3,
-      "failure_type": "unknown",
-      "root_cause": "Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429",
-      "suggested_fix": "检查错误信息",
-      "data_count": 0
-    },
-    {
-      "iteration": 4,
-      "failure_type": "unknown",
-      "root_cause": "Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429",
-      "suggested_fix": "检查错误信息",
-      "data_count": 0
-    },
-    {
-      "iteration": 5,
-      "failure_type": "unknown",
-      "root_cause": "Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429",
-      "suggested_fix": "检查错误信息",
-      "data_count": 0
-    },
-    {
-      "iteration": 6,
-      "failure_type": "unknown",
-      "root_cause": "Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429",
-      "suggested_fix": "检查错误信息",
-      "data_count": 0
     }
   ],
   "reflection_memory": [
-    "执行失败: 'NoneType' object is not subscriptable，数据量: 0",
-    "执行失败: Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429，数据量: 0",
-    "执行失败: Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429，数据量: 0",
-    "执行失败: Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429，数据量: 0",
-    "执行失败: Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429，数据量: 0",
-    "执行失败: Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429，数据量: 0"
+    "执行失败: 'NoneType' object is not subscriptable，数据量: 0"
   ],
-  "attempt_signatures": null,
+  "attempt_signatures": [
+    "f9db7afe"
+  ],
   "quality_issues": [
-    "评估异常: Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+    "Խϵ: 0ֱֶοȱʧ"
   ],
   "agent_result": {
     "success": true,
-    "agent_id": "agent_719ac44e",
+    "agent_id": "agent_e8608383",
     "site_url": "https://finance.yahoo.com/quote/AAPL/chart",
     "user_goal": "股票/基金图表站（K线SVG/价格）",
     "report": {
       "site_url": "https://finance.yahoo.com/quote/AAPL/chart",
       "user_goal": "股票/基金图表站（K线SVG/价格）",
-      "quality_score": 0.0,
+      "quality_score": 0,
       "sample_data": [],
-      "generated_code": ""
+      "generated_code": "from playwright.sync_api import sync_playwright\nimport json\nimport time\nimport random\nimport sys\n\nUSER_AGENTS = [\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\",\n    \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\",\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0\"\n]\n\ndef scrape(url: str) -> dict:\n    results = []\n    browser = None\n    try:\n        with sync_playwright() as p:\n            # 修复：使用标准的 API 调用，移除可能导致问题的 args 参数\n            browser = p.chromium.launch(headless=True)\n            \n            # 修复：使用标准的 new_page() 调用\n            page = browser.new_page()\n\n            # 访问目标URL，增加超时时间以应对金融站点的加载延迟\n            page.goto(url, wait_until='domcontentloaded', timeout=60000)\n\n            # 等待关键元素 body\n            try:\n                page.wait_for_selector('body', timeout=10000)\n            except:\n                pass\n\n            # 模拟人类行为延迟，等待JS渲染图表\n            time.sleep(random.uniform(3, 5))\n\n            # === 数据提取 ===\n            \n            # 策略1: 尝试提取 SVG 图表数据 (主要目标)\n            # 虽然之前的分析显示SVG为0，但图表通常动态加载，这里尝试显式等待\n            try:\n                page.wait_for_selector('svg', timeout=5000)\n            except:\n                pass\n\n            svgs = page.locator(\"svg\").all()\n            if svgs:\n                for i, svg in enumerate(svgs[:2]): # 限制提取数量，防止数据过大\n                    try:\n                        svg_code = svg.evaluate(\"el => el.outerHTML\")\n                        results.append({\n                            \"type\": \"svg_chart\",\n                            \"index\": i,\n                            \"content\": svg_code\n                        })\n                    except Exception:\n                        continue\n\n            # 策略2: 检查是否被拦截或处于错误页面 (使用已验证选择器 #message)\n            # 如果没有提取到SVG，检查是否有错误提示信息\n            if not results:\n                try:\n                    message = page.locator(\"#message p\").text_content()\n                    if message:\n                        results.append({\n                            \"type\": \"status_message\",\n                            \"content\": message.strip()\n                        })\n                except:\n                    pass\n\n            # 策略3: 提取页面导航链接 (使用已验证选择器 #switcher a)\n            try:\n                nav_links = page.locator(\"#switcher a\").all()\n                for link in nav_links:\n                    try:\n                        results.append({\n                            \"type\": \"navigation_link\",\n                            \"text\": link.text_content(),\n                            \"href\": link.get_attribute(\"href\")\n                        })\n                    except:\n                        continue\n            except:\n                pass\n\n            # 策略4: 提取通用链接 (使用已验证选择器 a[href])\n            # 作为最后的兜底方案，获取页面上的其他链接\n            try:\n                all_links = page.locator(\"a[href]\").all()\n                for link in all_links[:5]:\n                    try:\n                        text = link.text_content()\n                        href = link.get_attribute(\"href\")\n                        if text and href:\n                            results.append({\n                                \"type\": \"general_link\",\n                                \"text\": text.strip(),\n                                \"href\": href\n                            })\n                    except:\n                        continue\n            except:\n                pass\n\n    except Exception as e:\n        # 捕获并记录异常，确保程序不崩溃\n        results.append({\"error\": str(e)})\n    finally:\n        if browser:\n            browser.close()\n\n    # 数据清洗和验证\n    valid_results = [r for r in results if r.get(\"content\") or r.get(\"href\") or r.get(\"error\")]\n\n    return {\n        \"results\": valid_results,\n        \"metadata\": {\n            \"total_extracted\": len(results),\n            \"valid_count\": len(valid_results),\n            \"url\": url\n        }\n    }\n\nif __name__ == \"__main__\":\n    url = sys.argv[1] if len(sys.argv) > 1 else \"https://finance.yahoo.com/quote/AAPL/chart\"\n    result = scrape(url)\n    print(json.dumps(result, ensure_ascii=False, indent=2))"
     },
-    "markdown_report": "# 网站数据侦察报告\n\n## 站点信息\n- URL: https://finance.yahoo.com/quote/AAPL/chart\n- 用户需求: 股票/基金图表站（K线SVG/价格）\n\n## 侦察总结\n- SOOAL 迭代: 6\n- 质量分数: 0.0\n- 样本数量: 0\n",
-    "generated_code": "",
+    "markdown_report": "```markdown\n# 网站数据侦察报告\n\n## 站点信息\n- URL: https://finance.yahoo.com/quote/AAPL/chart\n- 用户需求: 股票/基金图表站（K线SVG/价格）\n- 侦察时间: 2024-05-21\n\n## 侦察总结\n- 估算数据总量: 未知 (当前侦察未捕获样本)\n- 样本质量分数: 0/1.0\n- 数据结构化程度: 待定 (需进一步分析)\n\n## 站点特征分析\n- 页面类型: 动态可视化图表页\n- 分页方式: 时间范围切换 (1D/5D/1M/6M/YTD/Max 等)\n- 反爬等级: 中高 (Yahoo Finance 具有严格的请求验证机制)\n\n## 真实样本预览\n暂无样本数据 (SOOAL 迭代 6 次未捕获有效数据，可能原因：页面动态渲染延迟或接口加密)\n\n## 可爬性评估\n- 反爬等级: 高\n- 技术难度: 复杂\n- 推荐策略: \n  1. **逆向 API 接口**: Yahoo Finance 的图表数据通常通过内部 API (如 `/v8/finance/chart/`) 获取 JSON 数据，而非直接解析 SVG。建议抓包分析 `crumb` 参数和 Cookie 验证机制。\n  2. **Headless Browser**: 若必须获取 SVG 图像，建议使用 Playwright 或 Selenium，设置较长的等待时间以确保图表渲染完成，再通过 Xpath 或 CSS Selector 提取 SVG 节点。\n  3. **请求频率控制**: 该站点对高频 IP 请求较为敏感，需设置合理的代理池和请求间隔。\n```",
+    "generated_code": "from playwright.sync_api import sync_playwright\nimport json\nimport time\nimport random\nimport sys\n\nUSER_AGENTS = [\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\",\n    \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\",\n    \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0\"\n]\n\ndef scrape(url: str) -> dict:\n    results = []\n    browser = None\n    try:\n        with sync_playwright() as p:\n            # 修复：使用标准的 API 调用，移除可能导致问题的 args 参数\n            browser = p.chromium.launch(headless=True)\n            \n            # 修复：使用标准的 new_page() 调用\n            page = browser.new_page()\n\n            # 访问目标URL，增加超时时间以应对金融站点的加载延迟\n            page.goto(url, wait_until='domcontentloaded', timeout=60000)\n\n            # 等待关键元素 body\n            try:\n                page.wait_for_selector('body', timeout=10000)\n            except:\n                pass\n\n            # 模拟人类行为延迟，等待JS渲染图表\n            time.sleep(random.uniform(3, 5))\n\n            # === 数据提取 ===\n            \n            # 策略1: 尝试提取 SVG 图表数据 (主要目标)\n            # 虽然之前的分析显示SVG为0，但图表通常动态加载，这里尝试显式等待\n            try:\n                page.wait_for_selector('svg', timeout=5000)\n            except:\n                pass\n\n            svgs = page.locator(\"svg\").all()\n            if svgs:\n                for i, svg in enumerate(svgs[:2]): # 限制提取数量，防止数据过大\n                    try:\n                        svg_code = svg.evaluate(\"el => el.outerHTML\")\n                        results.append({\n                            \"type\": \"svg_chart\",\n                            \"index\": i,\n                            \"content\": svg_code\n                        })\n                    except Exception:\n                        continue\n\n            # 策略2: 检查是否被拦截或处于错误页面 (使用已验证选择器 #message)\n            # 如果没有提取到SVG，检查是否有错误提示信息\n            if not results:\n                try:\n                    message = page.locator(\"#message p\").text_content()\n                    if message:\n                        results.append({\n                            \"type\": \"status_message\",\n                            \"content\": message.strip()\n                        })\n                except:\n                    pass\n\n            # 策略3: 提取页面导航链接 (使用已验证选择器 #switcher a)\n            try:\n                nav_links = page.locator(\"#switcher a\").all()\n                for link in nav_links:\n                    try:\n                        results.append({\n                            \"type\": \"navigation_link\",\n                            \"text\": link.text_content(),\n                            \"href\": link.get_attribute(\"href\")\n                        })\n                    except:\n                        continue\n            except:\n                pass\n\n            # 策略4: 提取通用链接 (使用已验证选择器 a[href])\n            # 作为最后的兜底方案，获取页面上的其他链接\n            try:\n                all_links = page.locator(\"a[href]\").all()\n                for link in all_links[:5]:\n                    try:\n                        text = link.text_content()\n                        href = link.get_attribute(\"href\")\n                        if text and href:\n                            results.append({\n                                \"type\": \"general_link\",\n                                \"text\": text.strip(),\n                                \"href\": href\n                            })\n                    except:\n                        continue\n            except:\n                pass\n\n    except Exception as e:\n        # 捕获并记录异常，确保程序不崩溃\n        results.append({\"error\": str(e)})\n    finally:\n        if browser:\n            browser.close()\n\n    # 数据清洗和验证\n    valid_results = [r for r in results if r.get(\"content\") or r.get(\"href\") or r.get(\"error\")]\n\n    return {\n        \"results\": valid_results,\n        \"metadata\": {\n            \"total_extracted\": len(results),\n            \"valid_count\": len(valid_results),\n            \"url\": url\n        }\n    }\n\nif __name__ == \"__main__\":\n    url = sys.argv[1] if len(sys.argv) > 1 else \"https://finance.yahoo.com/quote/AAPL/chart\"\n    result = scrape(url)\n    print(json.dumps(result, ensure_ascii=False, indent=2))",
     "stage": "done",
     "final_state": {
       "stage": "done",
-      "quality_score": 0.0,
+      "quality_score": 0,
       "sample_data": [],
       "sool_iteration": 6,
       "failure_history": [
@@ -86,54 +48,16 @@
           "root_cause": "'NoneType' object is not subscriptable",
           "suggested_fix": "检查错误信息",
           "data_count": 0
-        },
-        {
-          "iteration": 2,
-          "failure_type": "unknown",
-          "root_cause": "Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429",
-          "suggested_fix": "检查错误信息",
-          "data_count": 0
-        },
-        {
-          "iteration": 3,
-          "failure_type": "unknown",
-          "root_cause": "Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429",
-          "suggested_fix": "检查错误信息",
-          "data_count": 0
-        },
-        {
-          "iteration": 4,
-          "failure_type": "unknown",
-          "root_cause": "Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429",
-          "suggested_fix": "检查错误信息",
-          "data_count": 0
-        },
-        {
-          "iteration": 5,
-          "failure_type": "unknown",
-          "root_cause": "Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429",
-          "suggested_fix": "检查错误信息",
-          "data_count": 0
-        },
-        {
-          "iteration": 6,
-          "failure_type": "unknown",
-          "root_cause": "Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429",
-          "suggested_fix": "检查错误信息",
-          "data_count": 0
         }
       ],
       "reflection_memory": [
-        "执行失败: 'NoneType' object is not subscriptable，数据量: 0",
-        "执行失败: Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429，数据量: 0",
-        "执行失败: Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429，数据量: 0",
-        "执行失败: Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429，数据量: 0",
-        "执行失败: Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429，数据量: 0",
-        "执行失败: Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429，数据量: 0"
+        "执行失败: 'NoneType' object is not subscriptable，数据量: 0"
       ],
-      "attempt_signatures": null,
+      "attempt_signatures": [
+        "f9db7afe"
+      ],
       "quality_issues": [
-        "评估异常: Client error '429 Too Many Requests' for url 'https://open.bigmodel.cn/api/coding/paas/v4/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+        "Խϵ: 0ֱֶοȱʧ"
       ]
     }
   }

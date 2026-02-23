@@ -8,6 +8,30 @@ from typing import Dict, List, Optional
 from .selector_library import suggest_selectors, get_selector_fix_suggestion, generate_selector_suggestion_prompt
 
 
+# Stealth script 注入代码（避免在 f-string 中使用复杂的花括号）
+STEALTH_SCRIPT_INJECTION = """
+            # ========== 反检测脚本注入 ==========
+            # 隐藏 webdriver 等自动化特征
+            page.add_init_script('''
+                Object.defineProperty(navigator, 'webdriver', {
+                    get: () => undefined,
+                });
+                window.chrome = {
+                    runtime: {},
+                    loadTimes: function() {},
+                    csi: function() {},
+                    app: {}
+                };
+                Object.defineProperty(navigator, 'plugins', {
+                    get: () => [1, 2, 3, 4, 5],
+                });
+                Object.defineProperty(navigator, 'languages', {
+                    get: () => ['en-US', 'en'],
+                });
+            ''')
+"""
+
+
 def get_enhanced_code_generation_prompt(
     url: str,
     user_goal: str,
@@ -25,6 +49,14 @@ def get_enhanced_code_generation_prompt(
     """
     import json
 
+    # ========== 修复: 确保 failure_history 和 reflection_memory 不为 None ==========
+    if failure_history is None:
+        failure_history = []
+    if reflection_memory is None:
+        reflection_memory = []
+    if validated_selectors is None:
+        validated_selectors = []
+
     # 1. 选择器建议
     selector_suggestion = generate_selector_suggestion_prompt(url, user_goal, website_type)
 
@@ -32,13 +64,14 @@ def get_enhanced_code_generation_prompt(
     failure_hint = ""
     if failure_history:
         recent_failures = failure_history[-2:]  # 最近2次
-        failure_types = [f.get("failure_type", "") for f in recent_failures]
+        failure_types = [f.get("failure_type", "") for f in recent_failures if f]
+        root_cause = (recent_failures[-1].get("root_cause") or "N/A")[:150] if recent_failures else "N/A"
         failure_hint = f"""
 
 【历史失败类型】
 避免以下已知的失败类型：{", ".join(set(failure_types))}
 
-上次失败的根因：{recent_failures[-1].get("root_cause", "N/A")[:150] if recent_failures else "N/A"}
+上次失败的根因：{root_cause}
 """
 
     # 3. 反思记忆提示
@@ -94,20 +127,25 @@ import json
 import time
 import random
 
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0",
+]
+
 def scrape(url: str) -> dict:
     results = []
     browser = None
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(
-                headless=True,
                 {stealth_config}
             )
             page = browser.new_page(
                 user_agent=random.choice(USER_AGENTS),
-                viewport={{"width": 1920, "height": 1080}}
+                viewport="{{"width": 1920, "height": 1080}}"
             )
-
+{STEALTH_SCRIPT_INJECTION}
             page.goto(url, wait_until='domcontentloaded', timeout=30000)
 
             # 等待关键元素
@@ -195,13 +233,14 @@ if __name__ == "__main__":
 
 def _get_stealth_config_text(stealth_level: str) -> str:
     """获取隐身配置文本"""
+    # 修复：添加 headless 设置，medium/high 使用 headless=False
     configs = {
-        "none": "# 无隐身配置",
-        "low": """args=["--disable-blink-features=AutomationControlled"]""",
-        "medium": """args=["--disable-blink-features=AutomationControlled", "--no-sandbox"]""",
-        "high": """args=["--disable-blink-features=AutomationControlled", "--no-sandbox", "--disable-web-security"]""",
+        "none": """headless=True, args=[]""",
+        "low": """headless=True, args=['--disable-blink-features=AutomationControlled']""",
+        "medium": """headless=False, args=['--disable-blink-features=AutomationControlled', '--no-sandbox']""",
+        "high": """headless=False, args=['--disable-blink-features=AutomationControlled', '--no-sandbox', '--disable-web-security', '--disable-dev-shm-usage']""",
     }
-    return configs.get(stealth_level, configs["none"])
+    return configs.get(stealth_level, configs["medium"])
 
 
 def _get_code_extraction_guide(user_goal: str) -> str:

@@ -47,7 +47,7 @@ async def debug_test():
     if failure_history:
         print(f"\n[失败历史] 共 {len(failure_history)} 次:")
         for i, fail in enumerate(failure_history):
-            print(f"  {i+1}. {fail.get('failure_type')}: {fail.get('root_cause')[:100]}")
+            print(f"  {i+1}. {fail.get('failure_type')}: {(fail.get('root_cause') or '')[:100]}")
 
     # 显示生成的代码
     if result.get('generated_code'):
@@ -60,9 +60,9 @@ async def debug_test():
         print(f"\n[执行结果]")
         print(f"  成功: {execution_result.get('success')}")
         if execution_result.get('error'):
-            print(f"  错误: {execution_result.get('error')[:200]}")
+            print(f"  错误: {(execution_result.get('error') or '')[:200]}")
         if execution_result.get('stderr'):
-            print(f"  Stderr: {execution_result.get('stderr')[:200]}")
+            print(f"  Stderr: {(execution_result.get('stderr') or '')[:200]}")
 
     print("\n" + "="*70)
     print("  测试完成")

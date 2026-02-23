@@ -1,0 +1,404 @@
+{
+  "stage": "done",
+  "quality_score": 0,
+  "sample_data": [],
+  "sool_iteration": 6,
+  "failure_history": [
+    {
+      "iteration": 1,
+      "failure_type": "selector_error",
+      "root_cause": "网站类型被错误标记为 'ecommerce'，而 TechCrunch 实际上是一个新闻/媒体网站。这导致爬虫尝试使用针对电商产品（如价格、购物车按钮）的CSS选择器，而这些选择器与新闻文章的DOM结构（如标题、文章内容）完全不匹配。此外，TechCrunch 是一个 JavaScript 重度依赖的网站，如果爬虫没有等待动态内容加载，或者使用了错误的请求方式，也会导致选择器无法定位到元素。",
+      "suggested_fix": "1. 将网站类型更正为 'news/media' 或 'blog'，以确保生成正确的文章提取逻辑。\n2. 使用 Playwright 或 Selenium 等浏览器自动化工具，并配置 `wait_for_selector` 等待策略，确保动态加载的新闻列表和内容完全渲染。\n3. 更新 CSS 选择器以匹配 TechCrunch 的实际结构，例如使用 `h2.post-block__title` 提取标题，`article` 提取内容。\n4. 针对 'high' 级别的反爬虫，考虑添加随机 User-Agent 和延迟。",
+      "avoid_repeat": "不要盲目依赖自动生成的网站类型标签。在生成爬虫代码前，应验证 URL 的实际内容类型，确保选择器与目标网站的 DOM 结构一致。对于新闻类网站，务必处理 JavaScript 渲染问题。",
+      "data_count": 0,
+      "website_type": "ecommerce",
+      "anti_bot_level": "high",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      }
+    },
+    {
+      "iteration": 2,
+      "failure_type": "selector_error",
+      "root_cause": "爬虫逻辑被锁定在 'ecommerce'（电商）模式，导致提取策略与目标网站 TechCrunch（新闻媒体）的实际 DOM 结构完全脱节。具体而言，爬虫可能在寻找产品卡片容器（如 `.product-list`）、价格标签或购物车按钮，而这些元素在新闻网站上并不存在。TechCrunch 使用垂直的文章流布局（如 `.post-block`），爬虫因无法定位到预期的电商容器而返回了空结果。此外，鉴于网站被标记为 'high' 反爬虫等级且依赖 JavaScript，爬虫可能未能在动态内容注入完成前执行选择器，导致抓取到的是空的 HTML 骨架。",
+      "suggested_fix": "1. **强制覆盖网站类型**：将爬虫的配置模式从 'ecommerce' 显式切换为 'news/media' 或 'blog'，以启用针对文章的提取逻辑。\n2. **重构 CSS 选择器**：放弃电商选择器，改用针对新闻的通用选择器，例如使用 `article` 标签或 `.post-block__title` 类来定位标题，`.post-block__content` 定位摘要。\n3. **处理动态渲染**：使用 Playwright 或 Selenium，并配置 `wait_for_selector('h2')` 或 `wait_for_load_state('networkidle')`，确保 JavaScript 动态加载的新闻列表完全渲染后再进行提取。\n4. **字段映射调整**：将提取目标从 `price/stock` 调整为 `title/author/published_time`。",
+      "avoid_repeat": "不要盲目依赖自动生成的网站分类标签。在编写爬虫前，必须通过预检（如检查 URL 或首页 HTML）确认网站的实际内容类型（新闻 vs 电商），确保选择器范式与 DOM 结构匹配。对于 'high' 反爬虫等级的网站，切勿在未等待动态内容加载的情况下直接执行静态选择器。",
+      "data_count": 0,
+      "website_type": "ecommerce",
+      "anti_bot_level": "high",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      }
+    },
+    {
+      "iteration": 3,
+      "failure_type": "selector_error",
+      "root_cause": "爬虫被错误的 'ecommerce' 网站类型标签误导，导致其采用了针对电商产品的抓取策略，这与 TechCrunch 的新闻媒体架构严重冲突。具体表现为：1. **DOM 结构不匹配**：爬虫尝试查找产品容器（如 `.product-card`）和价格标签，而 TechCrunch 使用的是文章流布局（如 `article.post-block`）；2. **分页机制失效**：电商爬虫通常依赖传统的“下一页”链接进行翻页，而 TechCrunch 采用 JavaScript 驱动的**无限滚动**加载更多文章。爬虫在加载首页后，因找不到产品元素和分页链接，误认为抓取完成，从而返回了 0 条数据，完全没有触发动态内容的加载。",
+      "suggested_fix": "1. **强制修正网站类型**：将爬虫配置从 'ecommerce' 显式更改为 'news/media'，以匹配新闻网站的数据模型。\n2. **实现无限滚动逻辑**：使用 Playwright 的 `mouse.wheel()` 或 `evaluate` 模拟用户向下滚动页面，并结合 `wait_for_selector` 等待新文章加载，而不是寻找分页按钮。\n3. **重构选择器**：使用通用的新闻标签，如 `h2.post-block__title` (标题), `a.post-block__title__link` (链接), `time` (时间), 以及 `article` 标签来提取内容。\n4. **富文本提取**：针对目标中的 'HTML片段'，使用 `inner_html()` 方法获取文章正文，而不仅仅是纯文本，以保留图片和视频的引用。",
+      "avoid_repeat": "不要盲目依赖自动生成的网站类型标签，尤其是在 URL 明显属于新闻媒体时。在编写爬虫前，必须预检网站的导航方式（分页 vs 无限滚动）和 DOM 结构，确保生成的代码逻辑与目标网站的实际加载机制一致，避免因寻找不存在的元素或分页控件而导致空结果。",
+      "data_count": 0,
+      "website_type": "ecommerce",
+      "anti_bot_level": "high",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      }
+    },
+    {
+      "iteration": 4,
+      "failure_type": "selector_error",
+      "root_cause": "爬虫的提取逻辑被严格限制在 'ecommerce'（电商）数据模型内，导致其只寻找产品相关的特定数据结构（如价格、库存、SKU或 Schema.org 中的 `Product` 类型）。由于 TechCrunch 是新闻媒体网站，其 HTML 中完全不包含这些电商特征，爬虫在遍历 DOM 时因无法匹配到任何预期的 '产品容器' 而直接跳过了所有内容。此外，'high' 级别的反爬虫配置可能使爬虫采取了过于保守的策略（例如仅等待特定元素出现），在未检测到电商特征时过早判定页面无效，从而未能触发通用的文本提取逻辑。",
+      "suggested_fix": "1. **实现多模式回退机制**：在代码中增加逻辑判断，如果电商选择器（如 `.price`, `.product-card`）返回 0 条数据，立即自动切换到通用新闻模式（使用 `article`, `h2`, `time` 等标签）。\n2. **基于 Schema.org 的通用解析**：编写通用的 JSON-LD 提取器，不仅查找 `Product`，也查找 `NewsArticle` 或 `Article` 类型，以适应错误的网站类型标签。\n3. **强化动态渲染等待**：针对 'javascript_heavy' 和 'high' 反爬虫，使用 Playwright 的 `wait_for_function` 等待页面文章数量大于 0，而不是仅仅等待网络空闲，确保内容已注入 DOM。",
+      "avoid_repeat": "不要让预设的 '网站类型' 标签限制爬虫的数据提取能力。下次必须编写具有容错性的代码，确保当主要提取策略（基于电商）完全失败时，能够自动降级并尝试通用的 DOM 遍历策略，而不是直接返回空结果。",
+      "data_count": 0,
+      "website_type": "ecommerce",
+      "anti_bot_level": "high",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      }
+    },
+    {
+      "iteration": 5,
+      "failure_type": "selector_error",
+      "root_cause": "爬虫的导航逻辑被“ecommerce”类型标签和检测到的“pagination”特征误导，优先尝试寻找传统的分页链接（如 `<a>` 标签），而忽略了 TechCrunch 实际使用的“Load More”按钮或无限滚动机制。由于爬虫未执行滚动或点击加载更多的操作，新闻文章列表从未被动态注入到 DOM 中，导致提取器面对的是空的容器。",
+      "suggested_fix": "1. **交互优先策略**：对于标记为“javascript_heavy”的网站，强制优先执行滚动或查找“Load More”按钮，而非直接查找分页链接。2. **混合导航机制**：编写通用的内容加载函数，先尝试点击“Load More”，若失败再回退到分页链接跳转。3. **动态验证**：在提取前增加检查，如果当前页面文章数少于预期，自动触发滚动操作。",
+      "avoid_repeat": "不要因为检测到“pagination”特征就放弃滚动逻辑。不要假设电商网站一定使用静态分页，对于重度 JavaScript 网站，必须验证内容是否需要交互触发。",
+      "data_count": 0,
+      "website_type": "ecommerce",
+      "anti_bot_level": "high",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      }
+    },
+    {
+      "iteration": 6,
+      "failure_type": "anti_bot",
+      "root_cause": "爬虫被 TechCrunch 的 'high' 级别反爬虫系统（通常基于 Cloudflare）静默拦截，返回了验证码/挑战页面（如 'Just a moment...'）而非真实内容。由于爬虫被 'ecommerce' 标签误导，其逻辑仅包含寻找产品元素的选择器，并未包含对反爬虫挑战页面的检测机制。爬虫在挑战页面上找不到任何产品数据，便误判为页面无数据并成功退出，导致提取结果为 0 条，实际上爬虫从未接触到真实的新闻 DOM 结构。",
+      "suggested_fix": "1. **挑战页面检测**：在提取数据前，增加页面状态检查，判断 `document.title` 是否包含 'Just a moment'、'Attention' 等关键词，或 DOM 中是否存在 `#challenge-form` 等特征元素。2. **增强反爬虫对抗**：使用 `playwright-stealth` 插件或配置 `launch_persistent_context` 来隐藏自动化特征（如 `navigator.webdriver`），并设置真实的 User-Agent 和视口参数。3. **人类行为模拟**：若检测到挑战页面，不要立即退出，而是模拟人类行为（随机滚动、鼠标移动）等待验证通过，或增加重试机制。",
+      "avoid_repeat": "不要因为 HTTP 状态码为 200 或没有抛出异常，就默认认为获取到了目标网页的真实内容。在处理 'high' 反爬虫等级的网站时，必须优先验证当前页面是否处于反爬虫拦截/验证状态，避免在空壳页面上浪费提取逻辑。",
+      "data_count": 0,
+      "website_type": "ecommerce",
+      "anti_bot_level": "high",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      }
+    }
+  ],
+  "reflection_memory": [
+    "```json\n{\n    \"failure_type\": \"selector_error\",\n    \"root_cause\": \"网站类型被错误标记为 'ecommerce'，而 TechCrunch 实际上是一个新闻/媒体网站。这导致爬虫尝试使用针对电商产品（如价格、购物车按钮）的CSS选择器，而这些选择器与新闻文章的DOM结构（如标题、文章内容）完全不匹配。此外，TechCrunch 是一个 JavaScript 重度依赖的网站，如果爬虫没有等待动态内容加载，或者使用了错误的请求方式，也会导致选择器无法定位到元素。\",\n    \"suggested_fix\": \"1. 将网站类型更正为 'news/media' 或 'blog'，以确保生成正确的文章提取逻辑。\\n2. 使用 Playwright 或 Selenium 等浏览器自动化工具，并配置 `wait_for_selector` 等待策略，确保动态加载的新闻列表和内容完全渲染。\\n3. 更新 CSS 选择器以匹配 TechCrunch 的实际结构，例如使用 `h2.post-block__title` 提取标题，`article` 提取内容。\\n4. 针对 'high' 级别的反爬虫，考虑添加随机 User-Agent 和延迟。\",\n    \"avoid_repeat\": \"不要盲目依赖自动生成的网站类型标签。在生成爬虫代码前，应验证 URL 的实际内容类型，确保选择器与目标网站的 DOM 结构一致。对于新闻类网站，务必处理 JavaScript 渲染问题。\"\n}\n```",
+    "```json\n{\n    \"failure_type\": \"selector_error\",\n    \"root_cause\": \"爬虫逻辑被锁定在 'ecommerce'（电商）模式，导致提取策略与目标网站 TechCrunch（新闻媒体）的实际 DOM 结构完全脱节。具体而言，爬虫可能在寻找产品卡片容器（如 `.product-list`）、价格标签或购物车按钮，而这些元素在新闻网站上并不存在。TechCrunch 使用垂直的文章流布局（如 `.post-block`），爬虫因无法定位到预期的电商容器而返回了空结果。此外，鉴于网站被标记为 'high' 反爬虫等级且依赖 JavaScript，爬虫可能未能在动态内容注入完成前执行选择器，导致抓取到的是空的 HTML 骨架。\",\n    \"suggested_fix\": \"1. **强制覆盖网站类型**：将爬虫的配置模式从 'ecommerce' 显式切换为 'news/media' 或 'blog'，以启用针对文章的提取逻辑。\\n2. **重构 CSS 选择器**：放弃电商选择器，改用针对新闻的通用选择器，例如使用 `article` 标签或 `.post-block__title` 类来定位标题，`.post-block__content` 定位摘要。\\n3. **处理动态渲染**：使用 Playwright 或 Selenium，并配置 `wait_for_selector('h2')` 或 `wait_for_load_state('networkidle')`，确保 JavaScript 动态加载的新闻列表完全渲染后再进行提取。\\n4. **字段映射调整**：将提取目标从 `price/stock` 调整为 `title/author/published_time`。\",\n    \"avoid_repeat\": \"不要盲目依赖自动生成的网站分类标签。在编写爬虫前，必须通过预检（如检查 URL 或首页 HTML）确认网站的实际内容类型（新闻 vs 电商），确保选择器范式与 DOM 结构匹配。对于 'high' 反爬虫等级的网站，切勿在未等待动态内容加载的情况下直接执行静态选择器。\"\n}\n```",
+    "```json\n{\n    \"failure_type\": \"selector_error\",\n    \"root_cause\": \"爬虫被错误的 'ecommerce' 网站类型标签误导，导致其采用了针对电商产品的抓取策略，这与 TechCrunch 的新闻媒体架构严重冲突。具体表现为：1. **DOM 结构不匹配**：爬虫尝试查找产品容器（如 `.product-card`）和价格标签，而 TechCrunch 使用的是文章流布局（如 `article.post-block`）；2. **分页机制失效**：电商爬虫通常依赖传统的“下一页”链接进行翻页，而 TechCrunch 采用 JavaScript 驱动的**无限滚动**加载更多文章。爬虫在加载首页后，因找不到产品元素和分页链接，误认为抓取完成，从而返回了 0 条数据，完全没有触发动态内容的加载。\",\n    \"suggested_fix\": \"1. **强制修正网站类型**：将爬虫配置从 'ecommerce' 显式更改为 'news/media'，以匹配新闻网站的数据模型。\\n2. **实现无限滚动逻辑**：使用 Playwright 的 `mouse.wheel()` 或 `evaluate` 模拟用户向下滚动页面，并结合 `wait_for_selector` 等待新文章加载，而不是寻找分页按钮。\\n3. **重构选择器**：使用通用的新闻标签，如 `h2.post-block__title` (标题), `a.post-block__title__link` (链接), `time` (时间), 以及 `article` 标签来提取内容。\\n4. **富文本提取**：针对目标中的 'HTML片段'，使用 `inner_html()` 方法获取文章正文，而不仅仅是纯文本，以保留图片和视频的引用。\",\n    \"avoid_repeat\": \"不要盲目依赖自动生成的网站类型标签，尤其是在 URL 明显属于新闻媒体时。在编写爬虫前，必须预检网站的导航方式（分页 vs 无限滚动）和 DOM 结构，确保生成的代码逻辑与目标网站的实际加载机制一致，避免因寻找不存在的元素或分页控件而导致空结果。\"\n}\n```",
+    "```json\n{\n    \"failure_type\": \"selector_error\",\n    \"root_cause\": \"爬虫的提取逻辑被严格限制在 'ecommerce'（电商）数据模型内，导致其只寻找产品相关的特定数据结构（如价格、库存、SKU或 Schema.org 中的 `Product` 类型）。由于 TechCrunch 是新闻媒体网站，其 HTML 中完全不包含这些电商特征，爬虫在遍历 DOM 时因无法匹配到任何预期的 '产品容器' 而直接跳过了所有内容。此外，'high' 级别的反爬虫配置可能使爬虫采取了过于保守的策略（例如仅等待特定元素出现），在未检测到电商特征时过早判定页面无效，从而未能触发通用的文本提取逻辑。\",\n    \"suggested_fix\": \"1. **实现多模式回退机制**：在代码中增加逻辑判断，如果电商选择器（如 `.price`, `.product-card`）返回 0 条数据，立即自动切换到通用新闻模式（使用 `article`, `h2`, `time` 等标签）。\\n2. **基于 Schema.org 的通用解析**：编写通用的 JSON-LD 提取器，不仅查找 `Product`，也查找 `NewsArticle` 或 `Article` 类型，以适应错误的网站类型标签。\\n3. **强化动态渲染等待**：针对 'javascript_heavy' 和 'high' 反爬虫，使用 Playwright 的 `wait_for_function` 等待页面文章数量大于 0，而不是仅仅等待网络空闲，确保内容已注入 DOM。\",\n    \"avoid_repeat\": \"不要让预设的 '网站类型' 标签限制爬虫的数据提取能力。下次必须编写具有容错性的代码，确保当主要提取策略（基于电商）完全失败时，能够自动降级并尝试通用的 DOM 遍历策略，而不是直接返回空结果。\"\n}\n```",
+    "```json\n{\n    \"failure_type\": \"selector_error\",\n    \"root_cause\": \"爬虫的导航逻辑被“ecommerce”类型标签和检测到的“pagination”特征误导，优先尝试寻找传统的分页链接（如 `<a>` 标签），而忽略了 TechCrunch 实际使用的“Load More”按钮或无限滚动机制。由于爬虫未执行滚动或点击加载更多的操作，新闻文章列表从未被动态注入到 DOM 中，导致提取器面对的是空的容器。\",\n    \"suggested_fix\": \"1. **交互优先策略**：对于标记为“javascript_heavy”的网站，强制优先执行滚动或查找“Load More”按钮，而非直接查找分页链接。2. **混合导航机制**：编写通用的内容加载函数，先尝试点击“Load More”，若失败再回退到分页链接跳转。3. **动态验证**：在提取前增加检查，如果当前页面文章数少于预期，自动触发滚动操作。\",\n    \"avoid_repeat\": \"不要因为检测到“pagination”特征就放弃滚动逻辑。不要假设电商网站一定使用静态分页，对于重度 JavaScript 网站，必须验证内容是否需要交互触发。\"\n}\n```",
+    "```json\n{\n    \"failure_type\": \"anti_bot\",\n    \"root_cause\": \"爬虫被 TechCrunch 的 'high' 级别反爬虫系统（通常基于 Cloudflare）静默拦截，返回了验证码/挑战页面（如 'Just a moment...'）而非真实内容。由于爬虫被 'ecommerce' 标签误导，其逻辑仅包含寻找产品元素的选择器，并未包含对反爬虫挑战页面的检测机制。爬虫在挑战页面上找不到任何产品数据，便误判为页面无数据并成功退出，导致提取结果为 0 条，实际上爬虫从未接触到真实的新闻 DOM 结构。\",\n    \"suggested_fix\": \"1. **挑战页面检测**：在提取数据前，增加页面状态检查，判断 `document.title` 是否包含 'Just a moment'、'Attention' 等关键词，或 DOM 中是否存在 `#challenge-form` 等特征元素。2. **增强反爬虫对抗**：使用 `playwright-stealth` 插件或配置 `launch_persistent_context` 来隐藏自动化特征（如 `navigator.webdriver`），并设置真实的 User-Agent 和视口参数。3. **人类行为模拟**：若检测到挑战页面，不要立即退出，而是模拟人类行为（随机滚动、鼠标移动）等待验证通过，或增加重试机制。\",\n    \"avoid_repeat\": \"不要因为 HTTP 状态码为 200 或没有抛出异常，就默认认为获取到了目标网页的真实内容。在处理 'high' 反爬虫等级的网站时，必须优先验证当前页面是否处于反爬虫拦截/验证状态，避免在空壳页面上浪费提取逻辑。\"\n}\n```"
+  ],
+  "attempt_signatures": null,
+  "quality_issues": [
+    "Խϵ: 0ֱֶοȱʧ"
+  ],
+  "performance_data": {
+    "sense_start": 1771819905.8660398,
+    "sense_duration": 91.92157554626465,
+    "sense_end": 1771819997.7876153,
+    "sense_status": "success",
+    "sense_calls": 1,
+    "validate_start": 1771819997.791274,
+    "validate_duration": 0.006268978118896484,
+    "validate_end": 1771819997.797543,
+    "validate_status": "success",
+    "validate_calls": 1,
+    "plan_start": 1771820578.1895857,
+    "plan_duration": 0.00018167495727539062,
+    "plan_end": 1771820578.1897674,
+    "plan_status": "success",
+    "plan_calls": 6,
+    "verify_plan_start": 1771820578.1903195,
+    "verify_plan_duration": 8.106231689453125e-06,
+    "verify_plan_end": 1771820578.1903276,
+    "verify_plan_status": "success",
+    "verify_plan_calls": 6,
+    "act_start": 1771820578.1908956,
+    "act_duration": 0.03635668754577637,
+    "act_end": 1771820578.2272522,
+    "act_status": "success",
+    "act_calls": 6,
+    "verify_start": 1771820578.2283025,
+    "verify_duration": 38.922550678253174,
+    "verify_end": 1771820617.1508532,
+    "verify_status": "success",
+    "verify_calls": 6,
+    "reflect_start": 1771820617.1516309,
+    "reflect_duration": 62.87988018989563,
+    "reflect_end": 1771820680.031511,
+    "reflect_status": "success",
+    "reflect_calls": 6,
+    "report_start": 1771820680.032992,
+    "report_duration": 35.01675486564636,
+    "report_end": 1771820715.0497468,
+    "report_status": "success",
+    "report_calls": 1
+  },
+  "agent_result": {
+    "success": true,
+    "agent_id": "agent_5b297593",
+    "site_url": "https://techcrunch.com/",
+    "user_goal": "新闻文章富文本（标题/HTML片段/图片/视频）",
+    "report": {
+      "site_url": "https://techcrunch.com/",
+      "user_goal": "新闻文章富文本（标题/HTML片段/图片/视频）",
+      "quality_score": 0,
+      "sample_data": [],
+      "generated_code": ""
+    },
+    "markdown_report": "```markdown\n# 网站数据侦察报告\n\n## 站点信息\n- URL: https://techcrunch.com/\n- 用户需求: 新闻文章富文本（标题/HTML片段/图片/视频）\n- 侦察时间: 2023-10-27\n\n## 侦察总结\n- 估算数据总量: ~500,000+ (基于历史存档估算)\n- 样本质量分数: 0/1.0 (未获取样本)\n- 数据结构化程度: 高 (需客户端渲染)\n\n## 站点特征分析\n- 页面类型: 动态瀑布流 / 文章详情页\n- 分页方式: 无限滚动\n- 反爬等级: 中 (Cloudflare 防护 / 动态内容加载)\n\n## 真实样本预览\n> **注意**: 本次侦察未捕获到有效样本数据 (样本数量: 0)。\n> **原因分析**: 该站点采用高度动态的客户端渲染 (CSR) 技术，静态请求无法直接获取核心文章内容的 DOM 结构。\n>\n> **预期数据结构** (基于站点特征推测):\n> ```json\n> {\n>   \"title\": \"Example: TechCrunch reports on AI advancements\",\n>   \"author\": \"Jane Doe\",\n>   \"publish_time\": \"2023-10-27T10:00:00Z\",\n>   \"content_html\": \"<div><p>Article body content...</p><figure><img src=\"...\"/></figure></div>\",\n>   \"media_urls\": [\"https://techcrunch.com/wp-content/uploads/...jpg\"]\n> }\n> ```\n\n## 可爬性评估\n- 反爬等级: 中\n- 技术难度: 中等\n- 推荐策略:\n  1. **渲染策略**: 必须使用无头浏览器（如 Playwright、Puppeteer 或 Selenium）进行渲染，等待页面 JavaScript 执行完毕后再提取数据。\n  2. **列表获取**: 针对首页的无限滚动，需模拟滚动行为触发 API 请求或加载更多按钮；或直接寻找站点的 Sitemap 或存档索引页。\n  3. **反爬应对**: 站点部署了 Cloudflare，建议在请求头中设置真实的浏览器 User-Agent，并控制访问频率（建议 1-2 请求/秒），必要时使用代理 IP 池。\n  4. **数据提取**: 针对文章页，重点关注 `h1` 标签（标题）及 `.article-content` 或 `div[data-test-id=\"article-content\"]` 等容器（正文）。\n```",
+    "generated_code": "",
+    "stage": "done",
+    "final_state": {
+      "stage": "done",
+      "quality_score": 0,
+      "sample_data": [],
+      "sool_iteration": 6,
+      "failure_history": [
+        {
+          "iteration": 1,
+          "failure_type": "selector_error",
+          "root_cause": "网站类型被错误标记为 'ecommerce'，而 TechCrunch 实际上是一个新闻/媒体网站。这导致爬虫尝试使用针对电商产品（如价格、购物车按钮）的CSS选择器，而这些选择器与新闻文章的DOM结构（如标题、文章内容）完全不匹配。此外，TechCrunch 是一个 JavaScript 重度依赖的网站，如果爬虫没有等待动态内容加载，或者使用了错误的请求方式，也会导致选择器无法定位到元素。",
+          "suggested_fix": "1. 将网站类型更正为 'news/media' 或 'blog'，以确保生成正确的文章提取逻辑。\n2. 使用 Playwright 或 Selenium 等浏览器自动化工具，并配置 `wait_for_selector` 等待策略，确保动态加载的新闻列表和内容完全渲染。\n3. 更新 CSS 选择器以匹配 TechCrunch 的实际结构，例如使用 `h2.post-block__title` 提取标题，`article` 提取内容。\n4. 针对 'high' 级别的反爬虫，考虑添加随机 User-Agent 和延迟。",
+          "avoid_repeat": "不要盲目依赖自动生成的网站类型标签。在生成爬虫代码前，应验证 URL 的实际内容类型，确保选择器与目标网站的 DOM 结构一致。对于新闻类网站，务必处理 JavaScript 渲染问题。",
+          "data_count": 0,
+          "website_type": "ecommerce",
+          "anti_bot_level": "high",
+          "attempted_strategies": [
+            "validated_selectors"
+          ],
+          "partial_success": {
+            "partial_success": true,
+            "success_rate": 1.0,
+            "issues": [],
+            "strengths": [
+              "Code executed successfully"
+            ],
+            "recommendations": []
+          }
+        },
+        {
+          "iteration": 2,
+          "failure_type": "selector_error",
+          "root_cause": "爬虫逻辑被锁定在 'ecommerce'（电商）模式，导致提取策略与目标网站 TechCrunch（新闻媒体）的实际 DOM 结构完全脱节。具体而言，爬虫可能在寻找产品卡片容器（如 `.product-list`）、价格标签或购物车按钮，而这些元素在新闻网站上并不存在。TechCrunch 使用垂直的文章流布局（如 `.post-block`），爬虫因无法定位到预期的电商容器而返回了空结果。此外，鉴于网站被标记为 'high' 反爬虫等级且依赖 JavaScript，爬虫可能未能在动态内容注入完成前执行选择器，导致抓取到的是空的 HTML 骨架。",
+          "suggested_fix": "1. **强制覆盖网站类型**：将爬虫的配置模式从 'ecommerce' 显式切换为 'news/media' 或 'blog'，以启用针对文章的提取逻辑。\n2. **重构 CSS 选择器**：放弃电商选择器，改用针对新闻的通用选择器，例如使用 `article` 标签或 `.post-block__title` 类来定位标题，`.post-block__content` 定位摘要。\n3. **处理动态渲染**：使用 Playwright 或 Selenium，并配置 `wait_for_selector('h2')` 或 `wait_for_load_state('networkidle')`，确保 JavaScript 动态加载的新闻列表完全渲染后再进行提取。\n4. **字段映射调整**：将提取目标从 `price/stock` 调整为 `title/author/published_time`。",
+          "avoid_repeat": "不要盲目依赖自动生成的网站分类标签。在编写爬虫前，必须通过预检（如检查 URL 或首页 HTML）确认网站的实际内容类型（新闻 vs 电商），确保选择器范式与 DOM 结构匹配。对于 'high' 反爬虫等级的网站，切勿在未等待动态内容加载的情况下直接执行静态选择器。",
+          "data_count": 0,
+          "website_type": "ecommerce",
+          "anti_bot_level": "high",
+          "attempted_strategies": [
+            "validated_selectors"
+          ],
+          "partial_success": {
+            "partial_success": true,
+            "success_rate": 1.0,
+            "issues": [],
+            "strengths": [
+              "Code executed successfully"
+            ],
+            "recommendations": []
+          }
+        },
+        {
+          "iteration": 3,
+          "failure_type": "selector_error",
+          "root_cause": "爬虫被错误的 'ecommerce' 网站类型标签误导，导致其采用了针对电商产品的抓取策略，这与 TechCrunch 的新闻媒体架构严重冲突。具体表现为：1. **DOM 结构不匹配**：爬虫尝试查找产品容器（如 `.product-card`）和价格标签，而 TechCrunch 使用的是文章流布局（如 `article.post-block`）；2. **分页机制失效**：电商爬虫通常依赖传统的“下一页”链接进行翻页，而 TechCrunch 采用 JavaScript 驱动的**无限滚动**加载更多文章。爬虫在加载首页后，因找不到产品元素和分页链接，误认为抓取完成，从而返回了 0 条数据，完全没有触发动态内容的加载。",
+          "suggested_fix": "1. **强制修正网站类型**：将爬虫配置从 'ecommerce' 显式更改为 'news/media'，以匹配新闻网站的数据模型。\n2. **实现无限滚动逻辑**：使用 Playwright 的 `mouse.wheel()` 或 `evaluate` 模拟用户向下滚动页面，并结合 `wait_for_selector` 等待新文章加载，而不是寻找分页按钮。\n3. **重构选择器**：使用通用的新闻标签，如 `h2.post-block__title` (标题), `a.post-block__title__link` (链接), `time` (时间), 以及 `article` 标签来提取内容。\n4. **富文本提取**：针对目标中的 'HTML片段'，使用 `inner_html()` 方法获取文章正文，而不仅仅是纯文本，以保留图片和视频的引用。",
+          "avoid_repeat": "不要盲目依赖自动生成的网站类型标签，尤其是在 URL 明显属于新闻媒体时。在编写爬虫前，必须预检网站的导航方式（分页 vs 无限滚动）和 DOM 结构，确保生成的代码逻辑与目标网站的实际加载机制一致，避免因寻找不存在的元素或分页控件而导致空结果。",
+          "data_count": 0,
+          "website_type": "ecommerce",
+          "anti_bot_level": "high",
+          "attempted_strategies": [
+            "validated_selectors"
+          ],
+          "partial_success": {
+            "partial_success": true,
+            "success_rate": 1.0,
+            "issues": [],
+            "strengths": [
+              "Code executed successfully"
+            ],
+            "recommendations": []
+          }
+        },
+        {
+          "iteration": 4,
+          "failure_type": "selector_error",
+          "root_cause": "爬虫的提取逻辑被严格限制在 'ecommerce'（电商）数据模型内，导致其只寻找产品相关的特定数据结构（如价格、库存、SKU或 Schema.org 中的 `Product` 类型）。由于 TechCrunch 是新闻媒体网站，其 HTML 中完全不包含这些电商特征，爬虫在遍历 DOM 时因无法匹配到任何预期的 '产品容器' 而直接跳过了所有内容。此外，'high' 级别的反爬虫配置可能使爬虫采取了过于保守的策略（例如仅等待特定元素出现），在未检测到电商特征时过早判定页面无效，从而未能触发通用的文本提取逻辑。",
+          "suggested_fix": "1. **实现多模式回退机制**：在代码中增加逻辑判断，如果电商选择器（如 `.price`, `.product-card`）返回 0 条数据，立即自动切换到通用新闻模式（使用 `article`, `h2`, `time` 等标签）。\n2. **基于 Schema.org 的通用解析**：编写通用的 JSON-LD 提取器，不仅查找 `Product`，也查找 `NewsArticle` 或 `Article` 类型，以适应错误的网站类型标签。\n3. **强化动态渲染等待**：针对 'javascript_heavy' 和 'high' 反爬虫，使用 Playwright 的 `wait_for_function` 等待页面文章数量大于 0，而不是仅仅等待网络空闲，确保内容已注入 DOM。",
+          "avoid_repeat": "不要让预设的 '网站类型' 标签限制爬虫的数据提取能力。下次必须编写具有容错性的代码，确保当主要提取策略（基于电商）完全失败时，能够自动降级并尝试通用的 DOM 遍历策略，而不是直接返回空结果。",
+          "data_count": 0,
+          "website_type": "ecommerce",
+          "anti_bot_level": "high",
+          "attempted_strategies": [
+            "validated_selectors"
+          ],
+          "partial_success": {
+            "partial_success": true,
+            "success_rate": 1.0,
+            "issues": [],
+            "strengths": [
+              "Code executed successfully"
+            ],
+            "recommendations": []
+          }
+        },
+        {
+          "iteration": 5,
+          "failure_type": "selector_error",
+          "root_cause": "爬虫的导航逻辑被“ecommerce”类型标签和检测到的“pagination”特征误导，优先尝试寻找传统的分页链接（如 `<a>` 标签），而忽略了 TechCrunch 实际使用的“Load More”按钮或无限滚动机制。由于爬虫未执行滚动或点击加载更多的操作，新闻文章列表从未被动态注入到 DOM 中，导致提取器面对的是空的容器。",
+          "suggested_fix": "1. **交互优先策略**：对于标记为“javascript_heavy”的网站，强制优先执行滚动或查找“Load More”按钮，而非直接查找分页链接。2. **混合导航机制**：编写通用的内容加载函数，先尝试点击“Load More”，若失败再回退到分页链接跳转。3. **动态验证**：在提取前增加检查，如果当前页面文章数少于预期，自动触发滚动操作。",
+          "avoid_repeat": "不要因为检测到“pagination”特征就放弃滚动逻辑。不要假设电商网站一定使用静态分页，对于重度 JavaScript 网站，必须验证内容是否需要交互触发。",
+          "data_count": 0,
+          "website_type": "ecommerce",
+          "anti_bot_level": "high",
+          "attempted_strategies": [
+            "validated_selectors"
+          ],
+          "partial_success": {
+            "partial_success": true,
+            "success_rate": 1.0,
+            "issues": [],
+            "strengths": [
+              "Code executed successfully"
+            ],
+            "recommendations": []
+          }
+        },
+        {
+          "iteration": 6,
+          "failure_type": "anti_bot",
+          "root_cause": "爬虫被 TechCrunch 的 'high' 级别反爬虫系统（通常基于 Cloudflare）静默拦截，返回了验证码/挑战页面（如 'Just a moment...'）而非真实内容。由于爬虫被 'ecommerce' 标签误导，其逻辑仅包含寻找产品元素的选择器，并未包含对反爬虫挑战页面的检测机制。爬虫在挑战页面上找不到任何产品数据，便误判为页面无数据并成功退出，导致提取结果为 0 条，实际上爬虫从未接触到真实的新闻 DOM 结构。",
+          "suggested_fix": "1. **挑战页面检测**：在提取数据前，增加页面状态检查，判断 `document.title` 是否包含 'Just a moment'、'Attention' 等关键词，或 DOM 中是否存在 `#challenge-form` 等特征元素。2. **增强反爬虫对抗**：使用 `playwright-stealth` 插件或配置 `launch_persistent_context` 来隐藏自动化特征（如 `navigator.webdriver`），并设置真实的 User-Agent 和视口参数。3. **人类行为模拟**：若检测到挑战页面，不要立即退出，而是模拟人类行为（随机滚动、鼠标移动）等待验证通过，或增加重试机制。",
+          "avoid_repeat": "不要因为 HTTP 状态码为 200 或没有抛出异常，就默认认为获取到了目标网页的真实内容。在处理 'high' 反爬虫等级的网站时，必须优先验证当前页面是否处于反爬虫拦截/验证状态，避免在空壳页面上浪费提取逻辑。",
+          "data_count": 0,
+          "website_type": "ecommerce",
+          "anti_bot_level": "high",
+          "attempted_strategies": [
+            "validated_selectors"
+          ],
+          "partial_success": {
+            "partial_success": true,
+            "success_rate": 1.0,
+            "issues": [],
+            "strengths": [
+              "Code executed successfully"
+            ],
+            "recommendations": []
+          }
+        }
+      ],
+      "reflection_memory": [
+        "```json\n{\n    \"failure_type\": \"selector_error\",\n    \"root_cause\": \"网站类型被错误标记为 'ecommerce'，而 TechCrunch 实际上是一个新闻/媒体网站。这导致爬虫尝试使用针对电商产品（如价格、购物车按钮）的CSS选择器，而这些选择器与新闻文章的DOM结构（如标题、文章内容）完全不匹配。此外，TechCrunch 是一个 JavaScript 重度依赖的网站，如果爬虫没有等待动态内容加载，或者使用了错误的请求方式，也会导致选择器无法定位到元素。\",\n    \"suggested_fix\": \"1. 将网站类型更正为 'news/media' 或 'blog'，以确保生成正确的文章提取逻辑。\\n2. 使用 Playwright 或 Selenium 等浏览器自动化工具，并配置 `wait_for_selector` 等待策略，确保动态加载的新闻列表和内容完全渲染。\\n3. 更新 CSS 选择器以匹配 TechCrunch 的实际结构，例如使用 `h2.post-block__title` 提取标题，`article` 提取内容。\\n4. 针对 'high' 级别的反爬虫，考虑添加随机 User-Agent 和延迟。\",\n    \"avoid_repeat\": \"不要盲目依赖自动生成的网站类型标签。在生成爬虫代码前，应验证 URL 的实际内容类型，确保选择器与目标网站的 DOM 结构一致。对于新闻类网站，务必处理 JavaScript 渲染问题。\"\n}\n```",
+        "```json\n{\n    \"failure_type\": \"selector_error\",\n    \"root_cause\": \"爬虫逻辑被锁定在 'ecommerce'（电商）模式，导致提取策略与目标网站 TechCrunch（新闻媒体）的实际 DOM 结构完全脱节。具体而言，爬虫可能在寻找产品卡片容器（如 `.product-list`）、价格标签或购物车按钮，而这些元素在新闻网站上并不存在。TechCrunch 使用垂直的文章流布局（如 `.post-block`），爬虫因无法定位到预期的电商容器而返回了空结果。此外，鉴于网站被标记为 'high' 反爬虫等级且依赖 JavaScript，爬虫可能未能在动态内容注入完成前执行选择器，导致抓取到的是空的 HTML 骨架。\",\n    \"suggested_fix\": \"1. **强制覆盖网站类型**：将爬虫的配置模式从 'ecommerce' 显式切换为 'news/media' 或 'blog'，以启用针对文章的提取逻辑。\\n2. **重构 CSS 选择器**：放弃电商选择器，改用针对新闻的通用选择器，例如使用 `article` 标签或 `.post-block__title` 类来定位标题，`.post-block__content` 定位摘要。\\n3. **处理动态渲染**：使用 Playwright 或 Selenium，并配置 `wait_for_selector('h2')` 或 `wait_for_load_state('networkidle')`，确保 JavaScript 动态加载的新闻列表完全渲染后再进行提取。\\n4. **字段映射调整**：将提取目标从 `price/stock` 调整为 `title/author/published_time`。\",\n    \"avoid_repeat\": \"不要盲目依赖自动生成的网站分类标签。在编写爬虫前，必须通过预检（如检查 URL 或首页 HTML）确认网站的实际内容类型（新闻 vs 电商），确保选择器范式与 DOM 结构匹配。对于 'high' 反爬虫等级的网站，切勿在未等待动态内容加载的情况下直接执行静态选择器。\"\n}\n```",
+        "```json\n{\n    \"failure_type\": \"selector_error\",\n    \"root_cause\": \"爬虫被错误的 'ecommerce' 网站类型标签误导，导致其采用了针对电商产品的抓取策略，这与 TechCrunch 的新闻媒体架构严重冲突。具体表现为：1. **DOM 结构不匹配**：爬虫尝试查找产品容器（如 `.product-card`）和价格标签，而 TechCrunch 使用的是文章流布局（如 `article.post-block`）；2. **分页机制失效**：电商爬虫通常依赖传统的“下一页”链接进行翻页，而 TechCrunch 采用 JavaScript 驱动的**无限滚动**加载更多文章。爬虫在加载首页后，因找不到产品元素和分页链接，误认为抓取完成，从而返回了 0 条数据，完全没有触发动态内容的加载。\",\n    \"suggested_fix\": \"1. **强制修正网站类型**：将爬虫配置从 'ecommerce' 显式更改为 'news/media'，以匹配新闻网站的数据模型。\\n2. **实现无限滚动逻辑**：使用 Playwright 的 `mouse.wheel()` 或 `evaluate` 模拟用户向下滚动页面，并结合 `wait_for_selector` 等待新文章加载，而不是寻找分页按钮。\\n3. **重构选择器**：使用通用的新闻标签，如 `h2.post-block__title` (标题), `a.post-block__title__link` (链接), `time` (时间), 以及 `article` 标签来提取内容。\\n4. **富文本提取**：针对目标中的 'HTML片段'，使用 `inner_html()` 方法获取文章正文，而不仅仅是纯文本，以保留图片和视频的引用。\",\n    \"avoid_repeat\": \"不要盲目依赖自动生成的网站类型标签，尤其是在 URL 明显属于新闻媒体时。在编写爬虫前，必须预检网站的导航方式（分页 vs 无限滚动）和 DOM 结构，确保生成的代码逻辑与目标网站的实际加载机制一致，避免因寻找不存在的元素或分页控件而导致空结果。\"\n}\n```",
+        "```json\n{\n    \"failure_type\": \"selector_error\",\n    \"root_cause\": \"爬虫的提取逻辑被严格限制在 'ecommerce'（电商）数据模型内，导致其只寻找产品相关的特定数据结构（如价格、库存、SKU或 Schema.org 中的 `Product` 类型）。由于 TechCrunch 是新闻媒体网站，其 HTML 中完全不包含这些电商特征，爬虫在遍历 DOM 时因无法匹配到任何预期的 '产品容器' 而直接跳过了所有内容。此外，'high' 级别的反爬虫配置可能使爬虫采取了过于保守的策略（例如仅等待特定元素出现），在未检测到电商特征时过早判定页面无效，从而未能触发通用的文本提取逻辑。\",\n    \"suggested_fix\": \"1. **实现多模式回退机制**：在代码中增加逻辑判断，如果电商选择器（如 `.price`, `.product-card`）返回 0 条数据，立即自动切换到通用新闻模式（使用 `article`, `h2`, `time` 等标签）。\\n2. **基于 Schema.org 的通用解析**：编写通用的 JSON-LD 提取器，不仅查找 `Product`，也查找 `NewsArticle` 或 `Article` 类型，以适应错误的网站类型标签。\\n3. **强化动态渲染等待**：针对 'javascript_heavy' 和 'high' 反爬虫，使用 Playwright 的 `wait_for_function` 等待页面文章数量大于 0，而不是仅仅等待网络空闲，确保内容已注入 DOM。\",\n    \"avoid_repeat\": \"不要让预设的 '网站类型' 标签限制爬虫的数据提取能力。下次必须编写具有容错性的代码，确保当主要提取策略（基于电商）完全失败时，能够自动降级并尝试通用的 DOM 遍历策略，而不是直接返回空结果。\"\n}\n```",
+        "```json\n{\n    \"failure_type\": \"selector_error\",\n    \"root_cause\": \"爬虫的导航逻辑被“ecommerce”类型标签和检测到的“pagination”特征误导，优先尝试寻找传统的分页链接（如 `<a>` 标签），而忽略了 TechCrunch 实际使用的“Load More”按钮或无限滚动机制。由于爬虫未执行滚动或点击加载更多的操作，新闻文章列表从未被动态注入到 DOM 中，导致提取器面对的是空的容器。\",\n    \"suggested_fix\": \"1. **交互优先策略**：对于标记为“javascript_heavy”的网站，强制优先执行滚动或查找“Load More”按钮，而非直接查找分页链接。2. **混合导航机制**：编写通用的内容加载函数，先尝试点击“Load More”，若失败再回退到分页链接跳转。3. **动态验证**：在提取前增加检查，如果当前页面文章数少于预期，自动触发滚动操作。\",\n    \"avoid_repeat\": \"不要因为检测到“pagination”特征就放弃滚动逻辑。不要假设电商网站一定使用静态分页，对于重度 JavaScript 网站，必须验证内容是否需要交互触发。\"\n}\n```",
+        "```json\n{\n    \"failure_type\": \"anti_bot\",\n    \"root_cause\": \"爬虫被 TechCrunch 的 'high' 级别反爬虫系统（通常基于 Cloudflare）静默拦截，返回了验证码/挑战页面（如 'Just a moment...'）而非真实内容。由于爬虫被 'ecommerce' 标签误导，其逻辑仅包含寻找产品元素的选择器，并未包含对反爬虫挑战页面的检测机制。爬虫在挑战页面上找不到任何产品数据，便误判为页面无数据并成功退出，导致提取结果为 0 条，实际上爬虫从未接触到真实的新闻 DOM 结构。\",\n    \"suggested_fix\": \"1. **挑战页面检测**：在提取数据前，增加页面状态检查，判断 `document.title` 是否包含 'Just a moment'、'Attention' 等关键词，或 DOM 中是否存在 `#challenge-form` 等特征元素。2. **增强反爬虫对抗**：使用 `playwright-stealth` 插件或配置 `launch_persistent_context` 来隐藏自动化特征（如 `navigator.webdriver`），并设置真实的 User-Agent 和视口参数。3. **人类行为模拟**：若检测到挑战页面，不要立即退出，而是模拟人类行为（随机滚动、鼠标移动）等待验证通过，或增加重试机制。\",\n    \"avoid_repeat\": \"不要因为 HTTP 状态码为 200 或没有抛出异常，就默认认为获取到了目标网页的真实内容。在处理 'high' 反爬虫等级的网站时，必须优先验证当前页面是否处于反爬虫拦截/验证状态，避免在空壳页面上浪费提取逻辑。\"\n}\n```"
+      ],
+      "attempt_signatures": null,
+      "quality_issues": [
+        "Խϵ: 0ֱֶοȱʧ"
+      ],
+      "performance_data": {
+        "sense_start": 1771819905.8660398,
+        "sense_duration": 91.92157554626465,
+        "sense_end": 1771819997.7876153,
+        "sense_status": "success",
+        "sense_calls": 1,
+        "validate_start": 1771819997.791274,
+        "validate_duration": 0.006268978118896484,
+        "validate_end": 1771819997.797543,
+        "validate_status": "success",
+        "validate_calls": 1,
+        "plan_start": 1771820578.1895857,
+        "plan_duration": 0.00018167495727539062,
+        "plan_end": 1771820578.1897674,
+        "plan_status": "success",
+        "plan_calls": 6,
+        "verify_plan_start": 1771820578.1903195,
+        "verify_plan_duration": 8.106231689453125e-06,
+        "verify_plan_end": 1771820578.1903276,
+        "verify_plan_status": "success",
+        "verify_plan_calls": 6,
+        "act_start": 1771820578.1908956,
+        "act_duration": 0.03635668754577637,
+        "act_end": 1771820578.2272522,
+        "act_status": "success",
+        "act_calls": 6,
+        "verify_start": 1771820578.2283025,
+        "verify_duration": 38.922550678253174,
+        "verify_end": 1771820617.1508532,
+        "verify_status": "success",
+        "verify_calls": 6,
+        "reflect_start": 1771820617.1516309,
+        "reflect_duration": 62.87988018989563,
+        "reflect_end": 1771820680.031511,
+        "reflect_status": "success",
+        "reflect_calls": 6,
+        "report_start": 1771820680.032992,
+        "report_duration": 35.01675486564636,
+        "report_end": 1771820715.0497468,
+        "report_status": "success",
+        "report_calls": 1
+      }
+    }
+  }
+}

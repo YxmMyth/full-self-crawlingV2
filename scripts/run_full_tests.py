@@ -90,6 +90,10 @@ async def run_single_test(
         'description': description,
         'url': url,
         'status': 'unknown',
+        'flow_success': False,
+        'data_success': False,
+        'completion_status': 'unknown',
+        'failure_reason': None,
         'quality_score': 0.0,
         'sample_count': 0,
         'error': None,
@@ -116,6 +120,10 @@ async def run_single_test(
         # 从结果中提取数据
         final_state = agent_result.get('final_state', {})
         result['status'] = final_state.get('stage', agent_result.get('stage', 'unknown'))
+        result['flow_success'] = bool(agent_result.get('success', False))
+        result['data_success'] = bool(agent_result.get('data_success', False))
+        result['completion_status'] = agent_result.get('completion_status', result['status'])
+        result['failure_reason'] = agent_result.get('failure_reason') or final_state.get('failure_reason')
         result['quality_score'] = final_state.get('quality_score', 0.0)
         result['sample_count'] = len(final_state.get('sample_data', []))
         result['completed_at'] = datetime.now().isoformat()
@@ -149,8 +157,12 @@ async def run_single_test(
 
         # 显示结果摘要
         print(f"\n  [结果] 状态: {result['status']}")
+        print(f"  [结果] 流程成功: {result['flow_success']}")
+        print(f"  [结果] 数据成功: {result['data_success']}")
         print(f"  [结果] 质量分数: {result['quality_score']:.2f}")
         print(f"  [结果] 样本数量: {result['sample_count']}")
+        if result['failure_reason']:
+            print(f"  [结果] 失败原因: {result['failure_reason']}")
 
         # 显示性能摘要（如果启用）
         if test_config.get('track_performance') and result.get('performance_data'):
@@ -204,8 +216,9 @@ async def run_all_tests(
 def generate_summary_report(results: List[Dict[str, Any]], output_dir: Path):
     """生成测试摘要报告"""
     total = len(results)
-    success = sum(1 for r in results if r.get('status') in ['done', 'report'])
-    failed = total - success
+    flow_success = sum(1 for r in results if r.get('flow_success'))
+    data_success = sum(1 for r in results if r.get('data_success'))
+    failed = total - data_success
 
     total_samples = sum(r.get('sample_count', 0) for r in results)
     avg_quality = sum(r.get('quality_score', 0) for r in results) / max(total, 1)
@@ -214,14 +227,15 @@ def generate_summary_report(results: List[Dict[str, Any]], output_dir: Path):
     print(f"  测试摘要报告")
     print(f"{'='*70}")
     print(f"  总数: {total}")
-    print(f"  成功: {success} ({success/total*100:.1f}%)")
-    print(f"  失败: {failed} ({failed/total*100:.1f}%)")
+    print(f"  流程成功: {flow_success} ({flow_success/total*100:.1f}%)")
+    print(f"  数据成功: {data_success} ({data_success/total*100:.1f}%)")
+    print(f"  数据失败: {failed} ({failed/total*100:.1f}%)")
     print(f"  总样本数: {total_samples}")
     print(f"  平均质量: {avg_quality:.2f}")
 
     print(f"\n  详细结果:")
     for r in results:
-        status_icon = "[OK]" if r.get('status') in ['done', 'report'] else "[FAIL]"
+        status_icon = "[OK]" if r.get('data_success') else "[FAIL]"
         samples = r.get('sample_count', 0)
         quality = r.get('quality_score', 0)
         print(f"    {status_icon} #{r['id']} {r['description'][:40]}... | "
@@ -232,7 +246,8 @@ def generate_summary_report(results: List[Dict[str, Any]], output_dir: Path):
     with open(summary_file, 'w', encoding='utf-8') as f:
         json.dump({
             'total': total,
-            'success': success,
+            'flow_success': flow_success,
+            'data_success': data_success,
             'failed': failed,
             'total_samples': total_samples,
             'avg_quality': avg_quality,

@@ -1,0 +1,404 @@
+{
+  "stage": "done",
+  "quality_score": 0,
+  "sample_data": [],
+  "sool_iteration": 6,
+  "failure_history": [
+    {
+      "iteration": 1,
+      "failure_type": "selector_error",
+      "root_cause": "Amazon uses highly dynamic CSS class names (e.g., 'a-section', 's-result-item') that change frequently or are generated based on user context. The selectors used in the code likely did not match the actual DOM elements because they relied on these unstable class names. Additionally, as a 'javascript_heavy' site, elements might not have been present in the DOM at the moment of selection if no explicit wait was used.",
+      "suggested_fix": "Use robust selectors that target stable attributes like 'data-component-type' or specific ARIA roles. For example, use `div[data-component-type='s-search-result']` to select product cards. Implement explicit waits (e.g., `page.wait_for_selector`) to ensure the JavaScript has finished rendering the product grid before attempting extraction.",
+      "avoid_repeat": "Avoid using brittle CSS selectors that rely on short, alphanumeric class names specific to Amazon's styling framework. Do not assume elements are available immediately after page load without waiting for rendering.",
+      "data_count": 0,
+      "website_type": "ecommerce",
+      "anti_bot_level": "high",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      }
+    },
+    {
+      "iteration": 2,
+      "failure_type": "other",
+      "root_cause": "The Python code generation step failed to produce any executable code (the generated code block is empty). Consequently, an empty script was executed, which completed successfully without errors but performed no crawling actions, resulting in 0 extracted records. This indicates a failure in the code generation phase rather than a runtime logic error.",
+      "suggested_fix": "Ensure the code generation process outputs a complete, valid Python script using Playwright. The script must include: 1) Browser initialization with appropriate headers/stealth to bypass high-level anti-bot checks, 2) Navigation to the target URL, 3) Explicit wait strategies (e.g., `page.wait_for_selector('div[data-component-type=\"s-search-result\"]')`) to handle Amazon's 'javascript_heavy' nature and infinite scroll, and 4) Robust extraction logic using stable attributes like `data-component-type` or specific ARIA roles to gather product details.",
+      "avoid_repeat": "Do not proceed with execution if the generated code block is empty or incomplete. Always verify that valid code has been generated before running the script. Avoid assuming that a 'Code executed successfully' status implies that crawling logic was present and executed.",
+      "data_count": 0,
+      "website_type": "ecommerce",
+      "anti_bot_level": "high",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      }
+    },
+    {
+      "iteration": 3,
+      "failure_type": "empty_result",
+      "root_cause": "Amazon uses an 'infinite_scroll' mechanism to dynamically load products as the user scrolls down. Since the generated code was empty, it failed to implement the necessary scrolling logic to trigger the loading of product cards beyond the initial viewport. Consequently, the DOM remained largely unpopulated with product data (or only contained ads/headers), resulting in 0 extracted records. Additionally, the 'high' anti-bot level suggests that without proper headers (User-Agent, Accept-Language) in the code, Amazon likely detected the request as automated and served a degraded or empty page state.",
+      "suggested_fix": "Generate a complete Playwright script that includes: 1) Browser context configuration with realistic headers (User-Agent, Accept-Language, Accept-Encoding) to mimic a legitimate user and bypass basic anti-bot checks. 2) A scrolling loop (e.g., `page.mouse.wheel(0, 1000)` or `page.evaluate('window.scrollBy(0, window.innerHeight)')`) combined with `page.wait_for_timeout()` to trigger the infinite scroll and load multiple pages of results. 3) Explicit waits (`page.wait_for_selector('div[data-component-type=\"s-search-result\"]')`) to ensure product elements are rendered before extraction.",
+      "avoid_repeat": "Do not attempt to scrape e-commerce sites with infinite scroll (like Amazon) without implementing scrolling logic. Do not rely on default browser contexts without setting specific headers for high-security sites. Avoid assuming that all content is available immediately after page load.",
+      "data_count": 0,
+      "website_type": "ecommerce",
+      "anti_bot_level": "high",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      }
+    },
+    {
+      "iteration": 4,
+      "failure_type": "other",
+      "root_cause": "The code generation failed to produce a script because the extraction target 'PDF' is logically unavailable on the Amazon Search Results Page (SERP). PDFs (e.g., manuals) are typically located on individual Product Detail Pages (PDP), not the listing grid. This data availability mismatch likely caused a deadlock or error in the generation logic, resulting in an empty output. Furthermore, given Amazon's 'high' anti-bot level, the generation process may have been unable to construct a valid script without explicit anti-detection instructions (like 'playwright-stealth' or specific header configurations), leading to a default empty state rather than a script destined to be blocked.",
+      "suggested_fix": "Adjust the extraction target to match the SERP reality: focus on Name, Price, Specs (if available in snippets), and Main Image URL. Remove 'PDF' from the immediate scope or define a two-stage process (SERP scraping -> PDP scraping). Generate a robust Playwright script that includes: 1) `playwright-stealth` plugin to bypass basic bot detection, 2) Realistic browser headers (User-Agent, Accept-Language), 3) An infinite scroll loop with randomized delays to load all products, and 4) Stable selectors based on `data-component-type` attributes.",
+      "avoid_repeat": "Do not request data fields (like PDFs) that do not exist on the target page type (SERP). Do not attempt to scrape Amazon without incorporating anti-detection measures (stealth mode/headers) in the code generation prompt.",
+      "data_count": 0,
+      "website_type": "ecommerce",
+      "anti_bot_level": "high",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      }
+    },
+    {
+      "iteration": 5,
+      "failure_type": "empty_result",
+      "root_cause": "The code generation step failed to produce any script because the extraction target included 'PDF', which is structurally unavailable on a Search Results Page (SERP). This logical conflict likely caused the generation model to enter a deadlock or error state while trying to construct a selector for a non-existent element, resulting in an empty output rather than a partial script. The 'high' anti-bot complexity may have exacerbated this by preventing the model from falling back to a simpler, generic scraping logic.",
+      "suggested_fix": "Modify the generation prompt to include a 'graceful degradation' strategy. Explicitly instruct the code generator: 'If a specific field (e.g., PDF) is not found on the page, skip it and continue extracting the remaining available fields (Name, Price, Image).' This ensures that a valid Playwright script is generated even if the target list contains data unavailable on the current page type.",
+      "avoid_repeat": "Do not allow the code generation process to fail completely due to a single impossible data field. Avoid assuming the generator will automatically ignore mismatched targets; explicit error-handling instructions for missing selectors are necessary.",
+      "data_count": 0,
+      "website_type": "ecommerce",
+      "anti_bot_level": "high",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      }
+    },
+    {
+      "iteration": 6,
+      "failure_type": "other",
+      "root_cause": "The code generation process failed to produce a script (resulting in empty code) due to a fundamental 'Scope Mismatch' between the target URL and the requested data fields. The URL provided is a Search Results Page (SERP), but the extraction target explicitly requested 'Specs' and 'PDF', which are exclusively found on Product Detail Pages (PDP). This logical inconsistency caused the generation model to fail in constructing a valid scraping strategy, as it could not locate selectors for these non-existent elements without explicit instructions to navigate to individual product pages. Consequently, it returned an empty string instead of a partial script.",
+      "suggested_fix": "Realign the extraction target with the capabilities of the provided URL. Remove 'Specs' and 'PDF' from the requirements and focus strictly on SERP-available data: Name, Price, and Main Image URL. Instruct the code generator to create a Playwright script that: 1) Configures a stealth context with headers to bypass anti-bot checks, 2) Uses the selector `div[data-component-type='s-search-result']` to locate product cards, and 3) Extracts only the text content and attributes available within these card elements.",
+      "avoid_repeat": "Do not request PDP-specific data fields (like PDFs or detailed specifications) when the target URL is a Search Results Page (SERP). Avoid mixing page types in a single extraction task without defining a multi-stage navigation strategy (e.g., scrape list -> click links -> scrape details).",
+      "data_count": 0,
+      "website_type": "ecommerce",
+      "anti_bot_level": "high",
+      "attempted_strategies": [
+        "validated_selectors"
+      ],
+      "partial_success": {
+        "partial_success": true,
+        "success_rate": 1.0,
+        "issues": [],
+        "strengths": [
+          "Code executed successfully"
+        ],
+        "recommendations": []
+      }
+    }
+  ],
+  "reflection_memory": [
+    "```json\n{\n    \"failure_type\": \"selector_error\",\n    \"root_cause\": \"Amazon uses highly dynamic CSS class names (e.g., 'a-section', 's-result-item') that change frequently or are generated based on user context. The selectors used in the code likely did not match the actual DOM elements because they relied on these unstable class names. Additionally, as a 'javascript_heavy' site, elements might not have been present in the DOM at the moment of selection if no explicit wait was used.\",\n    \"suggested_fix\": \"Use robust selectors that target stable attributes like 'data-component-type' or specific ARIA roles. For example, use `div[data-component-type='s-search-result']` to select product cards. Implement explicit waits (e.g., `page.wait_for_selector`) to ensure the JavaScript has finished rendering the product grid before attempting extraction.\",\n    \"avoid_repeat\": \"Avoid using brittle CSS selectors that rely on short, alphanumeric class names specific to Amazon's styling framework. Do not assume elements are available immediately after page load without waiting for rendering.\"\n}\n```",
+    "```json\n{\n    \"failure_type\": \"other\",\n    \"root_cause\": \"The Python code generation step failed to produce any executable code (the generated code block is empty). Consequently, an empty script was executed, which completed successfully without errors but performed no crawling actions, resulting in 0 extracted records. This indicates a failure in the code generation phase rather than a runtime logic error.\",\n    \"suggested_fix\": \"Ensure the code generation process outputs a complete, valid Python script using Playwright. The script must include: 1) Browser initialization with appropriate headers/stealth to bypass high-level anti-bot checks, 2) Navigation to the target URL, 3) Explicit wait strategies (e.g., `page.wait_for_selector('div[data-component-type=\\\"s-search-result\\\"]')`) to handle Amazon's 'javascript_heavy' nature and infinite scroll, and 4) Robust extraction logic using stable attributes like `data-component-type` or specific ARIA roles to gather product details.\",\n    \"avoid_repeat\": \"Do not proceed with execution if the generated code block is empty or incomplete. Always verify that valid code has been generated before running the script. Avoid assuming that a 'Code executed successfully' status implies that crawling logic was present and executed.\"\n}\n```",
+    "```json\n{\n    \"failure_type\": \"empty_result\",\n    \"root_cause\": \"Amazon uses an 'infinite_scroll' mechanism to dynamically load products as the user scrolls down. Since the generated code was empty, it failed to implement the necessary scrolling logic to trigger the loading of product cards beyond the initial viewport. Consequently, the DOM remained largely unpopulated with product data (or only contained ads/headers), resulting in 0 extracted records. Additionally, the 'high' anti-bot level suggests that without proper headers (User-Agent, Accept-Language) in the code, Amazon likely detected the request as automated and served a degraded or empty page state.\",\n    \"suggested_fix\": \"Generate a complete Playwright script that includes: 1) Browser context configuration with realistic headers (User-Agent, Accept-Language, Accept-Encoding) to mimic a legitimate user and bypass basic anti-bot checks. 2) A scrolling loop (e.g., `page.mouse.wheel(0, 1000)` or `page.evaluate('window.scrollBy(0, window.innerHeight)')`) combined with `page.wait_for_timeout()` to trigger the infinite scroll and load multiple pages of results. 3) Explicit waits (`page.wait_for_selector('div[data-component-type=\\\"s-search-result\\\"]')`) to ensure product elements are rendered before extraction.\",\n    \"avoid_repeat\": \"Do not attempt to scrape e-commerce sites with infinite scroll (like Amazon) without implementing scrolling logic. Do not rely on default browser contexts without setting specific headers for high-security sites. Avoid assuming that all content is available immediately after page load.\"\n}\n```",
+    "```json\n{\n    \"failure_type\": \"other\",\n    \"root_cause\": \"The code generation failed to produce a script because the extraction target 'PDF' is logically unavailable on the Amazon Search Results Page (SERP). PDFs (e.g., manuals) are typically located on individual Product Detail Pages (PDP), not the listing grid. This data availability mismatch likely caused a deadlock or error in the generation logic, resulting in an empty output. Furthermore, given Amazon's 'high' anti-bot level, the generation process may have been unable to construct a valid script without explicit anti-detection instructions (like 'playwright-stealth' or specific header configurations), leading to a default empty state rather than a script destined to be blocked.\",\n    \"suggested_fix\": \"Adjust the extraction target to match the SERP reality: focus on Name, Price, Specs (if available in snippets), and Main Image URL. Remove 'PDF' from the immediate scope or define a two-stage process (SERP scraping -> PDP scraping). Generate a robust Playwright script that includes: 1) `playwright-stealth` plugin to bypass basic bot detection, 2) Realistic browser headers (User-Agent, Accept-Language), 3) An infinite scroll loop with randomized delays to load all products, and 4) Stable selectors based on `data-component-type` attributes.\",\n    \"avoid_repeat\": \"Do not request data fields (like PDFs) that do not exist on the target page type (SERP). Do not attempt to scrape Amazon without incorporating anti-detection measures (stealth mode/headers) in the code generation prompt.\"\n}\n```",
+    "```json\n{\n    \"failure_type\": \"empty_result\",\n    \"root_cause\": \"The code generation step failed to produce any script because the extraction target included 'PDF', which is structurally unavailable on a Search Results Page (SERP). This logical conflict likely caused the generation model to enter a deadlock or error state while trying to construct a selector for a non-existent element, resulting in an empty output rather than a partial script. The 'high' anti-bot complexity may have exacerbated this by preventing the model from falling back to a simpler, generic scraping logic.\",\n    \"suggested_fix\": \"Modify the generation prompt to include a 'graceful degradation' strategy. Explicitly instruct the code generator: 'If a specific field (e.g., PDF) is not found on the page, skip it and continue extracting the remaining available fields (Name, Price, Image).' This ensures that a valid Playwright script is generated even if the target list contains data unavailable on the current page type.\",\n    \"avoid_repeat\": \"Do not allow the code generation process to fail completely due to a single impossible data field. Avoid assuming the generator will automatically ignore mismatched targets; explicit error-handling instructions for missing selectors are necessary.\"\n}\n```",
+    "```json\n{\n    \"failure_type\": \"other\",\n    \"root_cause\": \"The code generation process failed to produce a script (resulting in empty code) due to a fundamental 'Scope Mismatch' between the target URL and the requested data fields. The URL provided is a Search Results Page (SERP), but the extraction target explicitly requested 'Specs' and 'PDF', which are exclusively found on Product Detail Pages (PDP). This logical inconsistency caused the generation model to fail in constructing a valid scraping strategy, as it could not locate selectors for these non-existent elements without explicit instructions to navigate to individual product pages. Consequently, it returned an empty string instead of a partial script.\",\n    \"suggested_fix\": \"Realign the extraction target with the capabilities of the provided URL. Remove 'Specs' and 'PDF' from the requirements and focus strictly on SERP-available data: Name, Price, and Main Image URL. Instruct the code generator to create a Playwright script that: 1) Configures a stealth context with headers to bypass anti-bot checks, 2) Uses the selector `div[data-component-type='s-search-result']` to locate product cards, and 3) Extracts only the text content and attributes available within these card elements.\",\n    \"avoid_repeat\": \"Do not request PDP-specific data fields (like PDFs or detailed specifications) when the target URL is a Search Results Page (SERP). Avoid mixing page types in a single extraction task without defining a multi-stage navigation strategy (e.g., scrape list -> click links -> scrape details).\"\n}\n```"
+  ],
+  "attempt_signatures": null,
+  "quality_issues": [
+    "Խϵ: 0ֱֶοȱʧ"
+  ],
+  "performance_data": {
+    "sense_start": 1771819155.1165564,
+    "sense_duration": 55.797499895095825,
+    "sense_end": 1771819210.9140563,
+    "sense_status": "success",
+    "sense_calls": 1,
+    "validate_start": 1771819210.9184773,
+    "validate_duration": 60.241819620132446,
+    "validate_end": 1771819271.160297,
+    "validate_status": "success",
+    "validate_calls": 1,
+    "plan_start": 1771819801.1421225,
+    "plan_duration": 8.654594421386719e-05,
+    "plan_end": 1771819801.142209,
+    "plan_status": "success",
+    "plan_calls": 6,
+    "verify_plan_start": 1771819801.1424727,
+    "verify_plan_duration": 5.245208740234375e-06,
+    "verify_plan_end": 1771819801.142478,
+    "verify_plan_status": "success",
+    "verify_plan_calls": 6,
+    "act_start": 1771819801.1427064,
+    "act_duration": 0.04440808296203613,
+    "act_end": 1771819801.1871145,
+    "act_status": "success",
+    "act_calls": 6,
+    "verify_start": 1771819801.1884522,
+    "verify_duration": 40.45707130432129,
+    "verify_end": 1771819841.6455235,
+    "verify_status": "success",
+    "verify_calls": 6,
+    "reflect_start": 1771819841.6464095,
+    "reflect_duration": 35.07710266113281,
+    "reflect_end": 1771819876.7235122,
+    "reflect_status": "success",
+    "reflect_calls": 6,
+    "report_start": 1771819876.724583,
+    "report_duration": 27.094531059265137,
+    "report_end": 1771819903.819114,
+    "report_status": "success",
+    "report_calls": 1
+  },
+  "agent_result": {
+    "success": true,
+    "agent_id": "agent_78e31495",
+    "site_url": "https://www.amazon.com/s?k=smartphone",
+    "user_goal": "电商手机产品页（名称/价格/规格/主图URL/PDF）",
+    "report": {
+      "site_url": "https://www.amazon.com/s?k=smartphone",
+      "user_goal": "电商手机产品页（名称/价格/规格/主图URL/PDF）",
+      "quality_score": 0,
+      "sample_data": [],
+      "generated_code": ""
+    },
+    "markdown_report": "```markdown\n# 网站数据侦察报告\n\n## 站点信息\n- URL: https://www.amazon.com/s?k=smartphone\n- 用户需求: 电商手机产品页（名称/价格/规格/主图URL/PDF）\n- 侦察时间: 2023-10-27\n\n## 侦察总结\n- 估算数据总量: 未知 (当前样本为 0)\n- 样本质量分数: 0/1.0\n- 数据结构化程度: 未知\n\n## 站点特征分析\n- 页面类型: 电商搜索结果列表页 (SERP)\n- 分页方式: 动态加载 / \"Next\"按钮分页\n- 反爬等级: 极高 (推测：样本为0极可能是因为触发了严格的反爬机制或验证码)\n\n## 真实样本预览\n**当前状态**: 侦察未返回样本数据 ([])\n**预期数据结构** (基于用户需求推测):\n```json\n[\n  {\n    \"name\": \"Smartphone Model Name\",\n    \"price\": \"$699.99\",\n    \"specs\": \"6.1 inch display, 128GB, 5G\",\n    \"main_image_url\": \"https://m.media-amazon.com/images/...\",\n    \"pdf_url\": \"https://.../user-manual.pdf\" \n  }\n]\n```\n\n## 可爬性评估\n- 反爬等级: 极高\n- 技术难度: 复杂\n- 推荐策略: \n  1. **浏览器自动化**: 使用 Playwright 或 Selenium 模拟真实用户操作，处理动态渲染。\n  2. **IP 代理池**: 必须使用高质量的住宅代理，避免 IP 被封锁。\n  3. **验证码处理**: 集成 2Captcha 或类似服务处理 CAPTCHA。\n  4. **深度爬取**: 用户需求包含 PDF，通常列表页不包含 PDF 链接，需先爬取列表页，再进入详情页 (PDP) 获取规格说明书/PDF。\n  5. **请求频率控制**: 严格控制并发和请求间隔，模拟人类浏览行为。\n```",
+    "generated_code": "",
+    "stage": "done",
+    "final_state": {
+      "stage": "done",
+      "quality_score": 0,
+      "sample_data": [],
+      "sool_iteration": 6,
+      "failure_history": [
+        {
+          "iteration": 1,
+          "failure_type": "selector_error",
+          "root_cause": "Amazon uses highly dynamic CSS class names (e.g., 'a-section', 's-result-item') that change frequently or are generated based on user context. The selectors used in the code likely did not match the actual DOM elements because they relied on these unstable class names. Additionally, as a 'javascript_heavy' site, elements might not have been present in the DOM at the moment of selection if no explicit wait was used.",
+          "suggested_fix": "Use robust selectors that target stable attributes like 'data-component-type' or specific ARIA roles. For example, use `div[data-component-type='s-search-result']` to select product cards. Implement explicit waits (e.g., `page.wait_for_selector`) to ensure the JavaScript has finished rendering the product grid before attempting extraction.",
+          "avoid_repeat": "Avoid using brittle CSS selectors that rely on short, alphanumeric class names specific to Amazon's styling framework. Do not assume elements are available immediately after page load without waiting for rendering.",
+          "data_count": 0,
+          "website_type": "ecommerce",
+          "anti_bot_level": "high",
+          "attempted_strategies": [
+            "validated_selectors"
+          ],
+          "partial_success": {
+            "partial_success": true,
+            "success_rate": 1.0,
+            "issues": [],
+            "strengths": [
+              "Code executed successfully"
+            ],
+            "recommendations": []
+          }
+        },
+        {
+          "iteration": 2,
+          "failure_type": "other",
+          "root_cause": "The Python code generation step failed to produce any executable code (the generated code block is empty). Consequently, an empty script was executed, which completed successfully without errors but performed no crawling actions, resulting in 0 extracted records. This indicates a failure in the code generation phase rather than a runtime logic error.",
+          "suggested_fix": "Ensure the code generation process outputs a complete, valid Python script using Playwright. The script must include: 1) Browser initialization with appropriate headers/stealth to bypass high-level anti-bot checks, 2) Navigation to the target URL, 3) Explicit wait strategies (e.g., `page.wait_for_selector('div[data-component-type=\"s-search-result\"]')`) to handle Amazon's 'javascript_heavy' nature and infinite scroll, and 4) Robust extraction logic using stable attributes like `data-component-type` or specific ARIA roles to gather product details.",
+          "avoid_repeat": "Do not proceed with execution if the generated code block is empty or incomplete. Always verify that valid code has been generated before running the script. Avoid assuming that a 'Code executed successfully' status implies that crawling logic was present and executed.",
+          "data_count": 0,
+          "website_type": "ecommerce",
+          "anti_bot_level": "high",
+          "attempted_strategies": [
+            "validated_selectors"
+          ],
+          "partial_success": {
+            "partial_success": true,
+            "success_rate": 1.0,
+            "issues": [],
+            "strengths": [
+              "Code executed successfully"
+            ],
+            "recommendations": []
+          }
+        },
+        {
+          "iteration": 3,
+          "failure_type": "empty_result",
+          "root_cause": "Amazon uses an 'infinite_scroll' mechanism to dynamically load products as the user scrolls down. Since the generated code was empty, it failed to implement the necessary scrolling logic to trigger the loading of product cards beyond the initial viewport. Consequently, the DOM remained largely unpopulated with product data (or only contained ads/headers), resulting in 0 extracted records. Additionally, the 'high' anti-bot level suggests that without proper headers (User-Agent, Accept-Language) in the code, Amazon likely detected the request as automated and served a degraded or empty page state.",
+          "suggested_fix": "Generate a complete Playwright script that includes: 1) Browser context configuration with realistic headers (User-Agent, Accept-Language, Accept-Encoding) to mimic a legitimate user and bypass basic anti-bot checks. 2) A scrolling loop (e.g., `page.mouse.wheel(0, 1000)` or `page.evaluate('window.scrollBy(0, window.innerHeight)')`) combined with `page.wait_for_timeout()` to trigger the infinite scroll and load multiple pages of results. 3) Explicit waits (`page.wait_for_selector('div[data-component-type=\"s-search-result\"]')`) to ensure product elements are rendered before extraction.",
+          "avoid_repeat": "Do not attempt to scrape e-commerce sites with infinite scroll (like Amazon) without implementing scrolling logic. Do not rely on default browser contexts without setting specific headers for high-security sites. Avoid assuming that all content is available immediately after page load.",
+          "data_count": 0,
+          "website_type": "ecommerce",
+          "anti_bot_level": "high",
+          "attempted_strategies": [
+            "validated_selectors"
+          ],
+          "partial_success": {
+            "partial_success": true,
+            "success_rate": 1.0,
+            "issues": [],
+            "strengths": [
+              "Code executed successfully"
+            ],
+            "recommendations": []
+          }
+        },
+        {
+          "iteration": 4,
+          "failure_type": "other",
+          "root_cause": "The code generation failed to produce a script because the extraction target 'PDF' is logically unavailable on the Amazon Search Results Page (SERP). PDFs (e.g., manuals) are typically located on individual Product Detail Pages (PDP), not the listing grid. This data availability mismatch likely caused a deadlock or error in the generation logic, resulting in an empty output. Furthermore, given Amazon's 'high' anti-bot level, the generation process may have been unable to construct a valid script without explicit anti-detection instructions (like 'playwright-stealth' or specific header configurations), leading to a default empty state rather than a script destined to be blocked.",
+          "suggested_fix": "Adjust the extraction target to match the SERP reality: focus on Name, Price, Specs (if available in snippets), and Main Image URL. Remove 'PDF' from the immediate scope or define a two-stage process (SERP scraping -> PDP scraping). Generate a robust Playwright script that includes: 1) `playwright-stealth` plugin to bypass basic bot detection, 2) Realistic browser headers (User-Agent, Accept-Language), 3) An infinite scroll loop with randomized delays to load all products, and 4) Stable selectors based on `data-component-type` attributes.",
+          "avoid_repeat": "Do not request data fields (like PDFs) that do not exist on the target page type (SERP). Do not attempt to scrape Amazon without incorporating anti-detection measures (stealth mode/headers) in the code generation prompt.",
+          "data_count": 0,
+          "website_type": "ecommerce",
+          "anti_bot_level": "high",
+          "attempted_strategies": [
+            "validated_selectors"
+          ],
+          "partial_success": {
+            "partial_success": true,
+            "success_rate": 1.0,
+            "issues": [],
+            "strengths": [
+              "Code executed successfully"
+            ],
+            "recommendations": []
+          }
+        },
+        {
+          "iteration": 5,
+          "failure_type": "empty_result",
+          "root_cause": "The code generation step failed to produce any script because the extraction target included 'PDF', which is structurally unavailable on a Search Results Page (SERP). This logical conflict likely caused the generation model to enter a deadlock or error state while trying to construct a selector for a non-existent element, resulting in an empty output rather than a partial script. The 'high' anti-bot complexity may have exacerbated this by preventing the model from falling back to a simpler, generic scraping logic.",
+          "suggested_fix": "Modify the generation prompt to include a 'graceful degradation' strategy. Explicitly instruct the code generator: 'If a specific field (e.g., PDF) is not found on the page, skip it and continue extracting the remaining available fields (Name, Price, Image).' This ensures that a valid Playwright script is generated even if the target list contains data unavailable on the current page type.",
+          "avoid_repeat": "Do not allow the code generation process to fail completely due to a single impossible data field. Avoid assuming the generator will automatically ignore mismatched targets; explicit error-handling instructions for missing selectors are necessary.",
+          "data_count": 0,
+          "website_type": "ecommerce",
+          "anti_bot_level": "high",
+          "attempted_strategies": [
+            "validated_selectors"
+          ],
+          "partial_success": {
+            "partial_success": true,
+            "success_rate": 1.0,
+            "issues": [],
+            "strengths": [
+              "Code executed successfully"
+            ],
+            "recommendations": []
+          }
+        },
+        {
+          "iteration": 6,
+          "failure_type": "other",
+          "root_cause": "The code generation process failed to produce a script (resulting in empty code) due to a fundamental 'Scope Mismatch' between the target URL and the requested data fields. The URL provided is a Search Results Page (SERP), but the extraction target explicitly requested 'Specs' and 'PDF', which are exclusively found on Product Detail Pages (PDP). This logical inconsistency caused the generation model to fail in constructing a valid scraping strategy, as it could not locate selectors for these non-existent elements without explicit instructions to navigate to individual product pages. Consequently, it returned an empty string instead of a partial script.",
+          "suggested_fix": "Realign the extraction target with the capabilities of the provided URL. Remove 'Specs' and 'PDF' from the requirements and focus strictly on SERP-available data: Name, Price, and Main Image URL. Instruct the code generator to create a Playwright script that: 1) Configures a stealth context with headers to bypass anti-bot checks, 2) Uses the selector `div[data-component-type='s-search-result']` to locate product cards, and 3) Extracts only the text content and attributes available within these card elements.",
+          "avoid_repeat": "Do not request PDP-specific data fields (like PDFs or detailed specifications) when the target URL is a Search Results Page (SERP). Avoid mixing page types in a single extraction task without defining a multi-stage navigation strategy (e.g., scrape list -> click links -> scrape details).",
+          "data_count": 0,
+          "website_type": "ecommerce",
+          "anti_bot_level": "high",
+          "attempted_strategies": [
+            "validated_selectors"
+          ],
+          "partial_success": {
+            "partial_success": true,
+            "success_rate": 1.0,
+            "issues": [],
+            "strengths": [
+              "Code executed successfully"
+            ],
+            "recommendations": []
+          }
+        }
+      ],
+      "reflection_memory": [
+        "```json\n{\n    \"failure_type\": \"selector_error\",\n    \"root_cause\": \"Amazon uses highly dynamic CSS class names (e.g., 'a-section', 's-result-item') that change frequently or are generated based on user context. The selectors used in the code likely did not match the actual DOM elements because they relied on these unstable class names. Additionally, as a 'javascript_heavy' site, elements might not have been present in the DOM at the moment of selection if no explicit wait was used.\",\n    \"suggested_fix\": \"Use robust selectors that target stable attributes like 'data-component-type' or specific ARIA roles. For example, use `div[data-component-type='s-search-result']` to select product cards. Implement explicit waits (e.g., `page.wait_for_selector`) to ensure the JavaScript has finished rendering the product grid before attempting extraction.\",\n    \"avoid_repeat\": \"Avoid using brittle CSS selectors that rely on short, alphanumeric class names specific to Amazon's styling framework. Do not assume elements are available immediately after page load without waiting for rendering.\"\n}\n```",
+        "```json\n{\n    \"failure_type\": \"other\",\n    \"root_cause\": \"The Python code generation step failed to produce any executable code (the generated code block is empty). Consequently, an empty script was executed, which completed successfully without errors but performed no crawling actions, resulting in 0 extracted records. This indicates a failure in the code generation phase rather than a runtime logic error.\",\n    \"suggested_fix\": \"Ensure the code generation process outputs a complete, valid Python script using Playwright. The script must include: 1) Browser initialization with appropriate headers/stealth to bypass high-level anti-bot checks, 2) Navigation to the target URL, 3) Explicit wait strategies (e.g., `page.wait_for_selector('div[data-component-type=\\\"s-search-result\\\"]')`) to handle Amazon's 'javascript_heavy' nature and infinite scroll, and 4) Robust extraction logic using stable attributes like `data-component-type` or specific ARIA roles to gather product details.\",\n    \"avoid_repeat\": \"Do not proceed with execution if the generated code block is empty or incomplete. Always verify that valid code has been generated before running the script. Avoid assuming that a 'Code executed successfully' status implies that crawling logic was present and executed.\"\n}\n```",
+        "```json\n{\n    \"failure_type\": \"empty_result\",\n    \"root_cause\": \"Amazon uses an 'infinite_scroll' mechanism to dynamically load products as the user scrolls down. Since the generated code was empty, it failed to implement the necessary scrolling logic to trigger the loading of product cards beyond the initial viewport. Consequently, the DOM remained largely unpopulated with product data (or only contained ads/headers), resulting in 0 extracted records. Additionally, the 'high' anti-bot level suggests that without proper headers (User-Agent, Accept-Language) in the code, Amazon likely detected the request as automated and served a degraded or empty page state.\",\n    \"suggested_fix\": \"Generate a complete Playwright script that includes: 1) Browser context configuration with realistic headers (User-Agent, Accept-Language, Accept-Encoding) to mimic a legitimate user and bypass basic anti-bot checks. 2) A scrolling loop (e.g., `page.mouse.wheel(0, 1000)` or `page.evaluate('window.scrollBy(0, window.innerHeight)')`) combined with `page.wait_for_timeout()` to trigger the infinite scroll and load multiple pages of results. 3) Explicit waits (`page.wait_for_selector('div[data-component-type=\\\"s-search-result\\\"]')`) to ensure product elements are rendered before extraction.\",\n    \"avoid_repeat\": \"Do not attempt to scrape e-commerce sites with infinite scroll (like Amazon) without implementing scrolling logic. Do not rely on default browser contexts without setting specific headers for high-security sites. Avoid assuming that all content is available immediately after page load.\"\n}\n```",
+        "```json\n{\n    \"failure_type\": \"other\",\n    \"root_cause\": \"The code generation failed to produce a script because the extraction target 'PDF' is logically unavailable on the Amazon Search Results Page (SERP). PDFs (e.g., manuals) are typically located on individual Product Detail Pages (PDP), not the listing grid. This data availability mismatch likely caused a deadlock or error in the generation logic, resulting in an empty output. Furthermore, given Amazon's 'high' anti-bot level, the generation process may have been unable to construct a valid script without explicit anti-detection instructions (like 'playwright-stealth' or specific header configurations), leading to a default empty state rather than a script destined to be blocked.\",\n    \"suggested_fix\": \"Adjust the extraction target to match the SERP reality: focus on Name, Price, Specs (if available in snippets), and Main Image URL. Remove 'PDF' from the immediate scope or define a two-stage process (SERP scraping -> PDP scraping). Generate a robust Playwright script that includes: 1) `playwright-stealth` plugin to bypass basic bot detection, 2) Realistic browser headers (User-Agent, Accept-Language), 3) An infinite scroll loop with randomized delays to load all products, and 4) Stable selectors based on `data-component-type` attributes.\",\n    \"avoid_repeat\": \"Do not request data fields (like PDFs) that do not exist on the target page type (SERP). Do not attempt to scrape Amazon without incorporating anti-detection measures (stealth mode/headers) in the code generation prompt.\"\n}\n```",
+        "```json\n{\n    \"failure_type\": \"empty_result\",\n    \"root_cause\": \"The code generation step failed to produce any script because the extraction target included 'PDF', which is structurally unavailable on a Search Results Page (SERP). This logical conflict likely caused the generation model to enter a deadlock or error state while trying to construct a selector for a non-existent element, resulting in an empty output rather than a partial script. The 'high' anti-bot complexity may have exacerbated this by preventing the model from falling back to a simpler, generic scraping logic.\",\n    \"suggested_fix\": \"Modify the generation prompt to include a 'graceful degradation' strategy. Explicitly instruct the code generator: 'If a specific field (e.g., PDF) is not found on the page, skip it and continue extracting the remaining available fields (Name, Price, Image).' This ensures that a valid Playwright script is generated even if the target list contains data unavailable on the current page type.\",\n    \"avoid_repeat\": \"Do not allow the code generation process to fail completely due to a single impossible data field. Avoid assuming the generator will automatically ignore mismatched targets; explicit error-handling instructions for missing selectors are necessary.\"\n}\n```",
+        "```json\n{\n    \"failure_type\": \"other\",\n    \"root_cause\": \"The code generation process failed to produce a script (resulting in empty code) due to a fundamental 'Scope Mismatch' between the target URL and the requested data fields. The URL provided is a Search Results Page (SERP), but the extraction target explicitly requested 'Specs' and 'PDF', which are exclusively found on Product Detail Pages (PDP). This logical inconsistency caused the generation model to fail in constructing a valid scraping strategy, as it could not locate selectors for these non-existent elements without explicit instructions to navigate to individual product pages. Consequently, it returned an empty string instead of a partial script.\",\n    \"suggested_fix\": \"Realign the extraction target with the capabilities of the provided URL. Remove 'Specs' and 'PDF' from the requirements and focus strictly on SERP-available data: Name, Price, and Main Image URL. Instruct the code generator to create a Playwright script that: 1) Configures a stealth context with headers to bypass anti-bot checks, 2) Uses the selector `div[data-component-type='s-search-result']` to locate product cards, and 3) Extracts only the text content and attributes available within these card elements.\",\n    \"avoid_repeat\": \"Do not request PDP-specific data fields (like PDFs or detailed specifications) when the target URL is a Search Results Page (SERP). Avoid mixing page types in a single extraction task without defining a multi-stage navigation strategy (e.g., scrape list -> click links -> scrape details).\"\n}\n```"
+      ],
+      "attempt_signatures": null,
+      "quality_issues": [
+        "Խϵ: 0ֱֶοȱʧ"
+      ],
+      "performance_data": {
+        "sense_start": 1771819155.1165564,
+        "sense_duration": 55.797499895095825,
+        "sense_end": 1771819210.9140563,
+        "sense_status": "success",
+        "sense_calls": 1,
+        "validate_start": 1771819210.9184773,
+        "validate_duration": 60.241819620132446,
+        "validate_end": 1771819271.160297,
+        "validate_status": "success",
+        "validate_calls": 1,
+        "plan_start": 1771819801.1421225,
+        "plan_duration": 8.654594421386719e-05,
+        "plan_end": 1771819801.142209,
+        "plan_status": "success",
+        "plan_calls": 6,
+        "verify_plan_start": 1771819801.1424727,
+        "verify_plan_duration": 5.245208740234375e-06,
+        "verify_plan_end": 1771819801.142478,
+        "verify_plan_status": "success",
+        "verify_plan_calls": 6,
+        "act_start": 1771819801.1427064,
+        "act_duration": 0.04440808296203613,
+        "act_end": 1771819801.1871145,
+        "act_status": "success",
+        "act_calls": 6,
+        "verify_start": 1771819801.1884522,
+        "verify_duration": 40.45707130432129,
+        "verify_end": 1771819841.6455235,
+        "verify_status": "success",
+        "verify_calls": 6,
+        "reflect_start": 1771819841.6464095,
+        "reflect_duration": 35.07710266113281,
+        "reflect_end": 1771819876.7235122,
+        "reflect_status": "success",
+        "reflect_calls": 6,
+        "report_start": 1771819876.724583,
+        "report_duration": 27.094531059265137,
+        "report_end": 1771819903.819114,
+        "report_status": "success",
+        "report_calls": 1
+      }
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "timestamp": "20260223_155657",
+  "total_duration": 181.4,
+  "total_tasks": 1,
+  "flow_passed_tasks": 1,
+  "data_passed_tasks": 0,
+  "data_pass_rate": 0.0,
+  "results": [
+    {
+      "task_id": 3,
+      "task_name": "Datawrapper图表",
+      "phase": 3,
+      "success": true,
+      "flow_success": true,
+      "data_success": false,
+      "duration": 179.4,
+      "data_count": 0,
+      "error": "",
+      "failure_reason": "PLAN_PROMPT_ERROR",
+      "sample_keys": [],
+      "detail_file": "D:\\full-self-crawlingV2\\scripts\\agent_test_results\\task_03_Datawrapper图表_20260223_155657_detail.json"
+    }
+  ]
+}

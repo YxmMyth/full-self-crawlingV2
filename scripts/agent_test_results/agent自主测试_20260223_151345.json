@@ -1,0 +1,52 @@
+{
+  "timestamp": "20260223_151345",
+  "total_duration": 641.6,
+  "total_tasks": 3,
+  "flow_passed_tasks": 0,
+  "data_passed_tasks": 0,
+  "data_pass_rate": 0.0,
+  "results": [
+    {
+      "task_id": 4,
+      "task_name": "Indeed招聘",
+      "phase": 3,
+      "success": false,
+      "flow_success": false,
+      "data_success": false,
+      "duration": 210.5,
+      "data_count": 0,
+      "error": "Recursion limit of 10000 reached without hitting a stop condition. You can increase the limit by setting the `recursion_limit` config key.\nFor troubleshooting, visit: https://docs.langchain.com/oss/py",
+      "failure_reason": "AGENT_RUNTIME_ERROR",
+      "sample_keys": [],
+      "detail_file": "D:\\full-self-crawlingV2\\scripts\\agent_test_results\\task_04_Indeed招聘_20260223_151345_detail.json"
+    },
+    {
+      "task_id": 3,
+      "task_name": "Datawrapper图表",
+      "phase": 3,
+      "success": false,
+      "flow_success": false,
+      "data_success": false,
+      "duration": 170.1,
+      "data_count": 0,
+      "error": "Recursion limit of 10000 reached without hitting a stop condition. You can increase the limit by setting the `recursion_limit` config key.\nFor troubleshooting, visit: https://docs.langchain.com/oss/py",
+      "failure_reason": "AGENT_RUNTIME_ERROR",
+      "sample_keys": [],
+      "detail_file": "D:\\full-self-crawlingV2\\scripts\\agent_test_results\\task_03_Datawrapper图表_20260223_151345_detail.json"
+    },
+    {
+      "task_id": 6,
+      "task_name": "Zillow房产",
+      "phase": 3,
+      "success": false,
+      "flow_success": false,
+      "data_success": false,
+      "duration": 255.0,
+      "data_count": 0,
+      "error": "Recursion limit of 10000 reached without hitting a stop condition. You can increase the limit by setting the `recursion_limit` config key.\nFor troubleshooting, visit: https://docs.langchain.com/oss/py",
+      "failure_reason": "AGENT_RUNTIME_ERROR",
+      "sample_keys": [],
+      "detail_file": "D:\\full-self-crawlingV2\\scripts\\agent_test_results\\task_06_Zillow房产_20260223_151345_detail.json"
+    }
+  ]
+}

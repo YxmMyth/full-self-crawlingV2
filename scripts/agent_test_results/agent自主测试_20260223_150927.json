@@ -1,0 +1,24 @@
+{
+  "timestamp": "20260223_150927",
+  "total_duration": 248.4,
+  "total_tasks": 1,
+  "flow_passed_tasks": 0,
+  "data_passed_tasks": 0,
+  "data_pass_rate": 0.0,
+  "results": [
+    {
+      "task_id": 5,
+      "task_name": "arXiv学术论文",
+      "phase": 1,
+      "success": false,
+      "flow_success": false,
+      "data_success": false,
+      "duration": 246.4,
+      "data_count": 0,
+      "error": "Recursion limit of 10000 reached without hitting a stop condition. You can increase the limit by setting the `recursion_limit` config key.\nFor troubleshooting, visit: https://docs.langchain.com/oss/py",
+      "failure_reason": "AGENT_RUNTIME_ERROR",
+      "sample_keys": [],
+      "detail_file": "D:\\full-self-crawlingV2\\scripts\\agent_test_results\\task_05_arXiv学术论文_20260223_150927_detail.json"
+    }
+  ]
+}

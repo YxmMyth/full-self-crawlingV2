@@ -1,0 +1,22 @@
+{
+  "timestamp": "20260223_154245",
+  "total_duration": 329.5,
+  "total_tasks": 1,
+  "flow_passed_tasks": 0,
+  "data_passed_tasks": 0,
+  "data_pass_rate": 0.0,
+  "results": [
+    {
+      "task_id": 1,
+      "task_name": "Amazon电商",
+      "phase": 4,
+      "success": false,
+      "flow_success": false,
+      "data_success": false,
+      "duration": 327.5,
+      "data_count": 0,
+      "error": "'NoneType' object is not subscriptable",
+      "sample_keys": []
+    }
+  ]
+}
