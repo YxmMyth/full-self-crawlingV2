@@ -126,7 +126,7 @@ async def validate_node(state: Dict[str, Any]) -> Dict[str, Any]:
             sandbox = create_sandbox(use_docker=False)
             alt_result = await sandbox.run_python_code(alternative_code, timeout=30)
 
-            if alt_result["success"] and isinstance(alt_result["output"], dict):
+            if alt_result.get("success", False) and isinstance(alt_result.get("output"), dict):
                 alt_selectors = alt_result["output"].get("alternative_selectors", [])
                 validation_report["alternative_selectors"] = alt_selectors
 

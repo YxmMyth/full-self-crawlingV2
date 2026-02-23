@@ -169,7 +169,7 @@ class DockerSandbox:
                     output = stdout
 
         return {
-            "success": result["success"],
+            "success": result.get("success", False),
             "output": output,
             "error": result.get("error"),
             "stdout": result.get("stdout", ""),
@@ -280,7 +280,7 @@ class SimpleSandbox:
                     output = stdout
 
         return {
-            "success": result["success"],
+            "success": result.get("success", False),
             "output": output,
             "error": result.get("error"),
             "stdout": result.get("stdout", ""),

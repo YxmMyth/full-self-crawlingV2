@@ -98,6 +98,7 @@ class SiteAgent:
                     "stage": final_state.get("stage"),
                     "quality_score": final_state.get("quality_score"),
                     "sample_data": final_state.get("sample_data"),
+                    "generated_code": final_state.get("generated_code"),  # 修复：添加 generated_code 字段
                     "sool_iteration": final_state.get("sool_iteration", 0),
                     "failure_history": final_state.get("failure_history", []),
                     "reflection_memory": final_state.get("reflection_memory", []),

@@ -841,8 +841,8 @@ async def run_deep_validation(
 
             deep_result = await sandbox.run_python_code(eval_code, timeout=60)
 
-            if deep_result["success"]:
-                result["results"]["pdfs"] = deep_result["output"]
+            if deep_result.get("success", False):
+                result["results"]["pdfs"] = deep_result.get("output")
 
                 # 缁熻涓ラ噸闂
                 output = deep_result.get("output", {})
@@ -873,8 +873,8 @@ async def run_deep_validation(
 
             deep_result = await sandbox.run_python_code(eval_code, timeout=30)
 
-            if deep_result["success"]:
-                result["results"]["videos"] = deep_result["output"]
+            if deep_result.get("success", False):
+                result["results"]["videos"] = deep_result.get("output")
             else:
                 result["results"]["videos"] = {"error": deep_result.get("error", "Unknown error")}
 
@@ -1075,7 +1075,7 @@ async def soal_node(state: ReconState) -> ReconState:
             sandbox = create_sandbox(use_docker=False)
             diagnosis_result = await sandbox.run_python_code(diagnose_code, timeout=30)
 
-            if diagnosis_result["success"] and isinstance(diagnosis_result["output"], dict):
+            if diagnosis_result.get("success", False) and isinstance(diagnosis_result.get("output"), dict):
                 diagnosis = diagnosis_result["output"]
             else:
                 diagnosis = {
